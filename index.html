@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Warriors: The Equation Arena</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x2694;</text></svg>">
+</head>
+<body>
+    <div id="game-container">
+
+        <!-- TITLE SCREEN -->
+        <div id="screen-title" class="screen active">
+            <div class="title-bg">
+                <div class="floating-symbols">
+                    <span class="float-sym" style="--delay:0s; --x:10%; --y:20%">+</span>
+                    <span class="float-sym" style="--delay:1s; --x:80%; --y:15%">&minus;</span>
+                    <span class="float-sym" style="--delay:2s; --x:20%; --y:70%">&times;</span>
+                    <span class="float-sym" style="--delay:0.5s; --x:70%; --y:60%">&divide;</span>
+                    <span class="float-sym" style="--delay:1.5s; --x:50%; --y:30%">=</span>
+                    <span class="float-sym" style="--delay:3s; --x:35%; --y:80%">&pi;</span>
+                    <span class="float-sym" style="--delay:2.5s; --x:85%; --y:75%">&radic;</span>
+                    <span class="float-sym" style="--delay:0.8s; --x:15%; --y:45%">&sum;</span>
+                    <span class="float-sym" style="--delay:1.8s; --x:60%; --y:85%">&infin;</span>
+                    <span class="float-sym" style="--delay:3.5s; --x:45%; --y:10%">&Delta;</span>
+                </div>
+                <div class="title-content">
+                    <div class="title-icon">&#x2694;</div>
+                    <h1 class="game-title">MATH WARRIORS</h1>
+                    <h2 class="game-subtitle">The Equation Arena</h2>
+                    <p class="title-tagline">Solve. Fight. Conquer.</p>
+                    <div class="title-buttons">
+                        <button class="btn btn-primary btn-glow" id="btn-new-game">New Game</button>
+                        <button class="btn btn-secondary" id="btn-continue" style="display:none">Continue</button>
+                        <button class="btn btn-ghost" id="btn-how-to-play">How to Play</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- HOW TO PLAY SCREEN -->
+        <div id="screen-tutorial" class="screen">
+            <div class="panel panel-large">
+                <h2 class="panel-title">How to Play</h2>
+                <div class="tutorial-content">
+                    <div class="tutorial-step">
+                        <div class="tutorial-icon">&#x2694;</div>
+                        <div>
+                            <h3>Battle Enemies</h3>
+                            <p>Face off against enemies in turn-based combat. Each turn, you'll be given a math problem to solve.</p>
+                        </div>
+                    </div>
+                    <div class="tutorial-step">
+                        <div class="tutorial-icon">&#x2705;</div>
+                        <div>
+                            <h3>Correct = Attack!</h3>
+                            <p>Answer correctly to deal damage to your enemy. The faster you answer, the more damage you deal!</p>
+                        </div>
+                    </div>
+                    <div class="tutorial-step">
+                        <div class="tutorial-icon">&#x1F4A5;</div>
+                        <div>
+                            <h3>Combos & Specials</h3>
+                            <p>Chain correct answers for combo multipliers. Build up your special attack meter for devastating moves!</p>
+                        </div>
+                    </div>
+                    <div class="tutorial-step">
+                        <div class="tutorial-icon">&#x1F512;</div>
+                        <div>
+                            <h3>Secrets & Clues</h3>
+                            <p>Look for golden bonus problems! Collect keys to unlock secret levels. Find hidden chests in each world.</p>
+                        </div>
+                    </div>
+                    <div class="tutorial-step">
+                        <div class="tutorial-icon">&#x1F4C8;</div>
+                        <div>
+                            <h3>Level Up</h3>
+                            <p>Earn XP and gold to increase your power. Buy potions and items from the shop between battles.</p>
+                        </div>
+                    </div>
+                    <div class="tutorial-step">
+                        <div class="tutorial-icon">&#x1F3C6;</div>
+                        <div>
+                            <h3>5 Worlds to Conquer</h3>
+                            <p>Journey through the Number Citadel, Fractional Forest, Algebra Abyss, Geometry Peaks, and the Final Dimension!</p>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="btn-tutorial-back">Back to Menu</button>
+            </div>
+        </div>
+
+        <!-- CHARACTER SELECT SCREEN -->
+        <div id="screen-character" class="screen">
+            <div class="panel panel-large">
+                <h2 class="panel-title">Choose Your Warrior</h2>
+                <div class="character-name-input">
+                    <label for="player-name">Enter your name:</label>
+                    <input type="text" id="player-name" placeholder="Math Warrior" maxlength="20" autocomplete="off">
+                </div>
+                <div class="character-grid" id="character-grid">
+                    <!-- Characters populated by JS -->
+                </div>
+                <button class="btn btn-primary btn-glow" id="btn-start-adventure" disabled>Begin Adventure</button>
+            </div>
+        </div>
+
+        <!-- WORLD MAP SCREEN -->
+        <div id="screen-map" class="screen">
+            <div class="map-header">
+                <div class="player-info-bar">
+                    <div class="player-avatar-small" id="map-player-avatar"></div>
+                    <div class="player-stats-bar">
+                        <span id="map-player-name">Warrior</span>
+                        <span class="player-level-badge" id="map-player-level">Lv. 1</span>
+                    </div>
+                    <div class="resource-bar">
+                        <span class="resource gold-resource">&#x1F4B0; <span id="map-gold">0</span></span>
+                        <span class="resource key-resource">&#x1F511; <span id="map-keys">0</span></span>
+                        <span class="resource xp-resource">&#x2B50; <span id="map-xp">0</span></span>
+                    </div>
+                    <div class="map-buttons">
+                        <button class="btn btn-small btn-ghost" id="btn-shop">Shop</button>
+                        <button class="btn btn-small btn-ghost" id="btn-achievements">Trophies</button>
+                        <button class="btn btn-small btn-ghost" id="btn-inventory">Items</button>
+                    </div>
+                </div>
+            </div>
+            <div class="world-map-container">
+                <div class="worlds-list" id="worlds-list">
+                    <!-- Worlds populated by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- BATTLE SCREEN -->
+        <div id="screen-battle" class="screen">
+            <div class="battle-arena">
+                <div class="battle-hud">
+                    <div class="battle-info">
+                        <span id="battle-level-name">Level 1</span>
+                        <span id="battle-world-name">The Number Citadel</span>
+                    </div>
+                    <div class="battle-turn-info">
+                        <span>Turn <span id="battle-turn">1</span></span>
+                        <span class="combo-indicator" id="combo-indicator" style="display:none">
+                            Combo x<span id="combo-count">0</span>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="battle-field">
+                    <!-- Player Side -->
+                    <div class="fighter fighter-player" id="fighter-player">
+                        <div class="fighter-sprite" id="player-sprite"></div>
+                        <div class="fighter-info">
+                            <span class="fighter-name" id="battle-player-name">Player</span>
+                            <div class="health-bar-container">
+                                <div class="health-bar" id="player-health-bar">
+                                    <div class="health-fill player-health" id="player-health-fill"></div>
+                                </div>
+                                <span class="health-text" id="player-health-text">100/100</span>
+                            </div>
+                            <div class="special-bar-container">
+                                <div class="special-bar" id="player-special-bar">
+                                    <div class="special-fill" id="player-special-fill"></div>
+                                </div>
+                                <span class="special-text">Special</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="vs-indicator">VS</div>
+
+                    <!-- Enemy Side -->
+                    <div class="fighter fighter-enemy" id="fighter-enemy">
+                        <div class="fighter-sprite" id="enemy-sprite"></div>
+                        <div class="fighter-info">
+                            <span class="fighter-name" id="battle-enemy-name">Enemy</span>
+                            <div class="health-bar-container">
+                                <div class="health-bar" id="enemy-health-bar">
+                                    <div class="health-fill enemy-health" id="enemy-health-fill"></div>
+                                </div>
+                                <span class="health-text" id="enemy-health-text">100/100</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Question Area -->
+                <div class="question-area" id="question-area">
+                    <div class="question-header">
+                        <span class="question-category" id="question-category">Arithmetic</span>
+                        <span class="question-difficulty" id="question-difficulty">Easy</span>
+                        <span class="question-timer" id="question-timer">30</span>
+                    </div>
+                    <div class="question-text" id="question-text">Loading...</div>
+                    <div class="question-hint" id="question-hint" style="display:none"></div>
+                    <div class="answer-area" id="answer-area">
+                        <!-- Multiple choice or input populated by JS -->
+                    </div>
+                    <div class="question-actions">
+                        <button class="btn btn-small btn-ghost" id="btn-use-hint" style="display:none">
+                            Use Hint (&#x1F4A1;)
+                        </button>
+                        <button class="btn btn-small btn-ghost" id="btn-use-item" style="display:none">
+                            Use Item
+                        </button>
+                        <button class="btn btn-primary" id="btn-submit-answer" disabled>Submit Answer</button>
+                    </div>
+                </div>
+
+                <!-- Battle Result Overlay -->
+                <div class="battle-result-overlay" id="battle-result" style="display:none">
+                    <div class="result-content" id="result-content">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Damage Numbers Container -->
+                <div id="damage-numbers"></div>
+
+                <!-- Battle Message -->
+                <div class="battle-message" id="battle-message" style="display:none"></div>
+            </div>
+        </div>
+
+        <!-- VICTORY SCREEN -->
+        <div id="screen-victory" class="screen">
+            <div class="panel panel-large victory-panel">
+                <div class="victory-header">
+                    <h2 id="victory-title">Victory!</h2>
+                    <div class="victory-stars" id="victory-stars"></div>
+                </div>
+                <div class="victory-stats" id="victory-stats">
+                    <!-- Populated by JS -->
+                </div>
+                <div class="victory-rewards" id="victory-rewards">
+                    <!-- Populated by JS -->
+                </div>
+                <div class="victory-secret" id="victory-secret" style="display:none">
+                    <!-- Secret discovery -->
+                </div>
+                <div class="victory-buttons">
+                    <button class="btn btn-primary btn-glow" id="btn-next-level">Next Level</button>
+                    <button class="btn btn-secondary" id="btn-back-to-map">World Map</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- DEFEAT SCREEN -->
+        <div id="screen-defeat" class="screen">
+            <div class="panel panel-large defeat-panel">
+                <h2 class="defeat-title">Defeated!</h2>
+                <p class="defeat-message">The enemy was too strong this time. Study the solutions and try again!</p>
+                <div class="defeat-review" id="defeat-review">
+                    <!-- Wrong answers review -->
+                </div>
+                <div class="defeat-buttons">
+                    <button class="btn btn-primary" id="btn-retry">Try Again</button>
+                    <button class="btn btn-secondary" id="btn-defeat-map">World Map</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SHOP SCREEN -->
+        <div id="screen-shop" class="screen">
+            <div class="panel panel-large">
+                <div class="shop-header">
+                    <h2 class="panel-title">Shop</h2>
+                    <span class="shop-gold">&#x1F4B0; <span id="shop-gold">0</span> Gold</span>
+                </div>
+                <div class="shop-grid" id="shop-grid">
+                    <!-- Shop items populated by JS -->
+                </div>
+                <button class="btn btn-ghost" id="btn-shop-back">Back to Map</button>
+            </div>
+        </div>
+
+        <!-- INVENTORY SCREEN -->
+        <div id="screen-inventory" class="screen">
+            <div class="panel panel-large">
+                <h2 class="panel-title">Inventory</h2>
+                <div class="inventory-grid" id="inventory-grid">
+                    <!-- Inventory items populated by JS -->
+                </div>
+                <button class="btn btn-ghost" id="btn-inventory-back">Back to Map</button>
+            </div>
+        </div>
+
+        <!-- ACHIEVEMENTS SCREEN -->
+        <div id="screen-achievements" class="screen">
+            <div class="panel panel-large">
+                <h2 class="panel-title">Trophies & Achievements</h2>
+                <div class="achievements-grid" id="achievements-grid">
+                    <!-- Achievements populated by JS -->
+                </div>
+                <button class="btn btn-ghost" id="btn-achievements-back">Back to Map</button>
+            </div>
+        </div>
+
+        <!-- SECRET LEVEL SCREEN (same as battle but with special styling) -->
+
+        <!-- LOADING OVERLAY -->
+        <div class="loading-overlay" id="loading-overlay" style="display:none">
+            <div class="loading-spinner"></div>
+            <p>Loading...</p>
+        </div>
+
+        <!-- NOTIFICATION -->
+        <div class="notification-container" id="notification-container"></div>
+    </div>
+
+    <script src="js/data.js"></script>
+    <script src="js/math.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
