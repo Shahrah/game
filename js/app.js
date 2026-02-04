@@ -1,188 +1,133 @@
 /* ============================================
-   MAIN APP - Entry Point & Event Bindings
+   APP - Entry Point & Event Bindings
    ============================================ */
-
 (function () {
     'use strict';
 
-    // ---- Initialize Game ----
-    Game.init();
-
-    // ---- Title Screen ----
-    const btnNewGame = document.getElementById('btn-new-game');
-    const btnContinue = document.getElementById('btn-continue');
-    const btnHowToPlay = document.getElementById('btn-how-to-play');
-
-    // Show continue button if save exists
-    if (Game.hasSaveData()) {
-        btnContinue.style.display = 'block';
+    // Initialize sound (must be after user interaction)
+    let soundReady = false;
+    function ensureSound() {
+        if (!soundReady) { Sound.init(); soundReady = true; }
+        Sound.resume();
     }
 
-    btnNewGame.addEventListener('click', () => {
-        UI.switchScreen('screen-character');
-        UI.renderCharacterSelect();
+    // Initialize game engine
+    Game.init();
+
+    // Show continue button if save exists
+    if (Game.hasSave()) {
+        document.getElementById('btn-continue').style.display = 'block';
+    }
+
+    // ---- Title Screen ----
+    document.getElementById('btn-new-game').addEventListener('click', () => {
+        ensureSound();
+        Sound.confirm();
+        Game.hideOverlay('screen-title');
+        Game.showOverlay('screen-charselect');
+        Game.renderCharSelect();
     });
 
-    btnContinue.addEventListener('click', () => {
-        UI.switchScreen('screen-map');
-        UI.renderWorldMap();
+    document.getElementById('btn-continue').addEventListener('click', () => {
+        ensureSound();
+        Sound.confirm();
+        Game.hideOverlay('screen-title');
+        Game.enterExplore();
     });
 
-    btnHowToPlay.addEventListener('click', () => {
-        UI.switchScreen('screen-tutorial');
+    document.getElementById('btn-how-to-play').addEventListener('click', () => {
+        ensureSound();
+        Sound.select();
+        Game.hideOverlay('screen-title');
+        Game.showOverlay('screen-tutorial');
     });
 
-    // ---- Tutorial Screen ----
-    document.getElementById('btn-tutorial-back').addEventListener('click', () => {
-        UI.switchScreen('screen-title');
+    // Sound toggle
+    document.getElementById('sound-toggle').addEventListener('click', () => {
+        ensureSound();
+        const on = Sound.toggle();
+        document.getElementById('sound-toggle').textContent = `Sound: ${on ? 'ON' : 'OFF'}`;
+    });
+
+    // ---- Tutorial ----
+    document.getElementById('btn-tut-back').addEventListener('click', () => {
+        Sound.select();
+        Game.hideOverlay('screen-tutorial');
+        Game.showOverlay('screen-title');
     });
 
     // ---- Character Select ----
-    document.getElementById('btn-start-adventure').addEventListener('click', () => {
+    document.getElementById('btn-start').addEventListener('click', () => {
         const name = document.getElementById('player-name').value.trim() || 'Warrior';
-        if (!Game.selectedCharacterId) {
-            UI.notify('Please select a character!', 'warning');
+        if (!Game.selectedCharId) {
+            Game.notify('Select a character!', 'error');
             return;
         }
-        Game.startNewGame(name, Game.selectedCharacterId);
-        UI.switchScreen('screen-map');
-        UI.renderWorldMap();
-        UI.notify(`Welcome, ${name}! Your journey begins...`, 'info', 4000);
+        Sound.confirm();
+        Game.startNewGame(name, Game.selectedCharId);
+        Game.hideOverlay('screen-charselect');
+        Game.enterExplore();
+        Game.notify(`Welcome, ${name}! Talk to the Elder for guidance.`, 'info', 5000);
     });
 
-    // ---- World Map Buttons ----
-    document.getElementById('btn-shop').addEventListener('click', () => {
-        UI.switchScreen('screen-shop');
-        UI.renderShop();
-    });
-
-    document.getElementById('btn-achievements').addEventListener('click', () => {
-        UI.switchScreen('screen-achievements');
-        UI.renderAchievements();
-    });
-
-    document.getElementById('btn-inventory').addEventListener('click', () => {
-        UI.switchScreen('screen-inventory');
-        UI.renderInventory();
-    });
-
-    // ---- Shop ----
-    document.getElementById('btn-shop-back').addEventListener('click', () => {
-        UI.switchScreen('screen-map');
-        UI.renderWorldMap();
-    });
-
-    // ---- Inventory ----
-    document.getElementById('btn-inventory-back').addEventListener('click', () => {
-        UI.switchScreen('screen-map');
-        UI.renderWorldMap();
-    });
-
-    // ---- Achievements ----
-    document.getElementById('btn-achievements-back').addEventListener('click', () => {
-        UI.switchScreen('screen-map');
-        UI.renderWorldMap();
-    });
-
-    // ---- Battle Screen ----
-    document.getElementById('btn-submit-answer').addEventListener('click', () => {
+    // ---- Battle ----
+    document.getElementById('btn-submit').addEventListener('click', () => {
         Game.submitAnswer();
     });
 
-    document.getElementById('btn-use-hint').addEventListener('click', () => {
+    document.getElementById('btn-hint').addEventListener('click', () => {
         Game.useHint();
     });
 
-    document.getElementById('btn-use-item').addEventListener('click', () => {
-        UI.showItemMenu();
+    // ---- Victory ----
+    document.getElementById('btn-victory-continue').addEventListener('click', () => {
+        Sound.select();
+        Game.hideOverlay('screen-victory');
+        Game.enterExplore();
     });
 
-    // ---- Victory Screen ----
-    document.getElementById('btn-next-level').addEventListener('click', () => {
-        if (!Game.battle) return;
-        const nextId = Game.getNextLevelId(Game.battle.levelId);
-        if (nextId) {
-            Game.startBattle(nextId);
-        } else {
-            UI.switchScreen('screen-map');
-            UI.renderWorldMap();
-            UI.notify('You have conquered all available levels!', 'success');
-        }
-    });
-
-    document.getElementById('btn-back-to-map').addEventListener('click', () => {
-        UI.switchScreen('screen-map');
-        UI.renderWorldMap();
-    });
-
-    // ---- Defeat Screen ----
+    // ---- Defeat ----
     document.getElementById('btn-retry').addEventListener('click', () => {
-        if (Game.battle) {
-            Game.startBattle(Game.battle.levelId);
-        }
+        Sound.select();
+        Game.hideOverlay('screen-defeat');
+        // Re-enter the map; enemy is still there
+        Game.enterExplore();
     });
 
-    document.getElementById('btn-defeat-map').addEventListener('click', () => {
-        UI.switchScreen('screen-map');
-        UI.renderWorldMap();
+    document.getElementById('btn-retreat').addEventListener('click', () => {
+        Sound.select();
+        Game.hideOverlay('screen-defeat');
+        Game.state.currentMap = 'village';
+        Game.state.playerX = 14;
+        Game.state.playerY = 18;
+        Game.saveState();
+        Game.enterExplore();
     });
 
-    // ---- Keyboard Shortcuts ----
-    document.addEventListener('keydown', (e) => {
-        // During battle, number keys select options
-        if (Game.battle && Game.battle.isActive) {
-            const key = e.key;
-            if (['1', '2', '3', '4'].includes(key)) {
-                const options = document.querySelectorAll('.answer-option');
-                const idx = parseInt(key) - 1;
-                if (options[idx]) {
-                    options[idx].click();
-                }
+    // ---- Shop ----
+    document.getElementById('btn-shop-close').addEventListener('click', () => {
+        Sound.select();
+        Game.closeShop();
+    });
+
+    // ---- Inventory ----
+    document.getElementById('btn-inv-close').addEventListener('click', () => {
+        Sound.select();
+        Game.closeInventory();
+    });
+
+    // ---- Escape key for menus ----
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+            if (Game.mode === 'menu') {
+                Game.hideAllOverlays();
+                Game.mode = 'explore';
+                Game.updateHUD();
             }
-            if (key === 'Enter' && Game.selectedAnswer !== null) {
-                Game.submitAnswer();
-            }
-            // S for special
-            if (key === 's' || key === 'S') {
-                if (Game.battle.specialCharge >= Game.battle.specialMaxCharge) {
-                    Game.useSpecial();
-                }
-            }
         }
     });
 
-    // ---- Special Attack Button (add dynamically to battle) ----
-    const specialBtn = document.createElement('button');
-    specialBtn.className = 'btn btn-small btn-ghost';
-    specialBtn.id = 'btn-special-attack';
-    specialBtn.textContent = 'Special (S)';
-    specialBtn.style.display = 'none';
-    document.querySelector('.question-actions').prepend(specialBtn);
-    specialBtn.addEventListener('click', () => {
-        Game.useSpecial();
-    });
-
-    // Update special button visibility
-    const originalUpdateSpecial = UI.updateSpecialBar.bind(UI);
-    UI.updateSpecialBar = function () {
-        originalUpdateSpecial();
-        if (Game.battle) {
-            specialBtn.style.display =
-                Game.battle.specialCharge >= Game.battle.specialMaxCharge ? 'inline-block' : 'none';
-        }
-    };
-
-    // ---- Prevent accidental navigation ----
-    window.addEventListener('beforeunload', (e) => {
-        if (Game.battle && Game.battle.isActive) {
-            e.preventDefault();
-            e.returnValue = '';
-        }
-    });
-
-    // ---- Auto-save periodically ----
-    setInterval(() => {
-        if (Game.state) Game.saveState();
-    }, 30000);
+    // ---- Auto-save ----
+    setInterval(() => { if (Game.state) Game.saveState(); }, 30000);
 
 })();
