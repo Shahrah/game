@@ -13,6 +13,7 @@
 
     // Initialize game engine
     Game.init();
+    Game.setupTouchControls();
 
     // Show continue button if save exists
     if (Game.hasSave()) {
@@ -46,7 +47,7 @@
     document.getElementById('sound-toggle').addEventListener('click', () => {
         ensureSound();
         const on = Sound.toggle();
-        document.getElementById('sound-toggle').textContent = `Sound: ${on ? 'ON' : 'OFF'}`;
+        document.getElementById('sound-toggle').textContent = `\u0627\u0644\u0635\u0648\u062A: ${on ? '\u0645\u0641\u0639\u0651\u0644' : '\u0645\u0648\u0642\u0641'}`;
     });
 
     // ---- Tutorial ----
@@ -58,16 +59,16 @@
 
     // ---- Character Select ----
     document.getElementById('btn-start').addEventListener('click', () => {
-        const name = document.getElementById('player-name').value.trim() || 'Warrior';
+        const name = document.getElementById('player-name').value.trim() || '\u0645\u062D\u0627\u0631\u0628';
         if (!Game.selectedCharId) {
-            Game.notify('Select a character!', 'error');
+            Game.notify('\u0627\u062E\u062A\u0631 \u0634\u062E\u0635\u064A\u0629!', 'error');
             return;
         }
         Sound.confirm();
         Game.startNewGame(name, Game.selectedCharId);
         Game.hideOverlay('screen-charselect');
         Game.enterExplore();
-        Game.notify(`Welcome, ${name}! Talk to the Elder for guidance.`, 'info', 5000);
+        Game.notify(`\u0645\u0631\u062D\u0628\u0627\u064B ${name}! \u062A\u062D\u062F\u062B \u0645\u0639 \u0627\u0644\u0634\u064A\u062E \u0644\u0644\u0625\u0631\u0634\u0627\u062F.`, 'info', 5000);
     });
 
     // ---- Battle ----

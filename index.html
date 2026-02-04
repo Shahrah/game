@@ -1,33 +1,48 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Math Warriors: The Equation Arena</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>محاربو الرياضيات: ساحة المعادلات</title>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x2694;</text></svg>">
 </head>
 <body>
-    <!-- GAME CANVAS (exploration & battle visuals) -->
+    <!-- GAME CANVAS -->
     <canvas id="game-canvas"></canvas>
 
-    <!-- HUD OVERLAY (always visible during gameplay) -->
+    <!-- HUD OVERLAY -->
     <div id="hud" class="hud hidden">
         <div class="hud-left">
             <div class="hud-portrait" id="hud-portrait"></div>
             <div class="hud-stats">
-                <div class="hud-name" id="hud-name">Warrior</div>
-                <div class="hud-level" id="hud-level">Lv. 1</div>
+                <div class="hud-name" id="hud-name">محارب</div>
+                <div class="hud-level" id="hud-level">م. 1</div>
                 <div class="hud-hp-bar"><div class="hud-hp-fill" id="hud-hp-fill"></div></div>
             </div>
         </div>
         <div class="hud-right">
-            <span class="hud-res" id="hud-gold">0 G</span>
-            <span class="hud-res" id="hud-keys">0 K</span>
-            <span class="hud-res" id="hud-xp">0 XP</span>
+            <span class="hud-res" id="hud-gold">0 ذهب</span>
+            <span class="hud-res" id="hud-keys">0 مفتاح</span>
+            <span class="hud-res" id="hud-xp">0 خبرة</span>
         </div>
-        <div class="hud-location" id="hud-location">Village</div>
-        <div class="hud-hint" id="hud-hint">Arrow keys to move &bull; SPACE to interact</div>
+        <div class="hud-location" id="hud-location">القرية</div>
+        <div class="hud-hint" id="hud-hint">الأسهم للحركة &bull; المسافة للتفاعل</div>
+    </div>
+
+    <!-- TOUCH CONTROLS -->
+    <div id="touch-controls" class="touch-controls hidden">
+        <div class="touch-dpad">
+            <button class="touch-btn touch-up" data-dir="up">&#9650;</button>
+            <button class="touch-btn touch-left" data-dir="left">&#9664;</button>
+            <button class="touch-btn touch-center"></button>
+            <button class="touch-btn touch-right" data-dir="right">&#9654;</button>
+            <button class="touch-btn touch-down" data-dir="down">&#9660;</button>
+        </div>
+        <div class="touch-actions">
+            <button class="touch-btn touch-action" id="touch-interact">&#9889;</button>
+            <button class="touch-btn touch-inv" id="touch-inventory">&#128188;</button>
+        </div>
     </div>
 
     <!-- TITLE SCREEN -->
@@ -35,15 +50,15 @@
         <div class="title-bg">
             <canvas id="title-canvas"></canvas>
             <div class="title-content">
-                <h1 class="game-title">MATH WARRIORS</h1>
-                <h2 class="game-subtitle">The Equation Arena</h2>
-                <p class="title-tagline">Explore &bull; Solve &bull; Fight &bull; Conquer</p>
+                <h1 class="game-title">محاربو الرياضيات</h1>
+                <h2 class="game-subtitle">ساحة المعادلات</h2>
+                <p class="title-tagline">استكشف &bull; حُل &bull; قاتل &bull; انتصر</p>
                 <div class="title-buttons">
-                    <button class="btn btn-primary btn-glow" id="btn-new-game">New Game</button>
-                    <button class="btn btn-secondary" id="btn-continue" style="display:none">Continue</button>
-                    <button class="btn btn-ghost" id="btn-how-to-play">How to Play</button>
+                    <button class="btn btn-primary btn-glow" id="btn-new-game">لعبة جديدة</button>
+                    <button class="btn btn-secondary" id="btn-continue" style="display:none">متابعة</button>
+                    <button class="btn btn-ghost" id="btn-how-to-play">كيف تلعب</button>
                 </div>
-                <div class="sound-toggle" id="sound-toggle">Sound: ON</div>
+                <div class="sound-toggle" id="sound-toggle">الصوت: مفعّل</div>
             </div>
         </div>
     </div>
@@ -51,49 +66,49 @@
     <!-- HOW TO PLAY -->
     <div id="screen-tutorial" class="overlay">
         <div class="panel">
-            <h2 class="panel-title">How to Play</h2>
+            <h2 class="panel-title">كيف تلعب</h2>
             <div class="tut-grid">
-                <div class="tut-item"><span class="tut-key">Arrow Keys / WASD</span> Move your character</div>
-                <div class="tut-item"><span class="tut-key">SPACE / E</span> Talk to NPCs & interact</div>
-                <div class="tut-item"><span class="tut-key">Walk into enemies</span> Start a math battle</div>
-                <div class="tut-item"><span class="tut-key">I</span> Open inventory</div>
-                <div class="tut-item"><span class="tut-key">M</span> Open map</div>
-                <div class="tut-item"><span class="tut-key">1-4</span> Select answer in battle</div>
+                <div class="tut-item"><span class="tut-key">مفاتيح الأسهم / WASD</span> حرّك شخصيتك</div>
+                <div class="tut-item"><span class="tut-key">المسافة / E</span> تحدث وتفاعل</div>
+                <div class="tut-item"><span class="tut-key">امشِ نحو الأعداء</span> ابدأ معركة رياضيات</div>
+                <div class="tut-item"><span class="tut-key">I</span> افتح المخزون</div>
+                <div class="tut-item"><span class="tut-key">أزرار اللمس</span> تحكم بالجوال</div>
+                <div class="tut-item"><span class="tut-key">1-4</span> اختر إجابة في المعركة</div>
             </div>
             <div class="tut-section">
-                <h3>Explore</h3>
-                <p>Walk around villages, forests, caves, and castles. Talk to NPCs for clues and hints. Find treasure chests with secret rewards.</p>
+                <h3>استكشف</h3>
+                <p>تجوّل في القرى والغابات والكهوف والقلاع. تحدث مع الشخصيات للحصول على أدلة وتلميحات. اعثر على صناديق الكنز ذات المكافآت السرية.</p>
             </div>
             <div class="tut-section">
-                <h3>Fight</h3>
-                <p>When you encounter an enemy, solve math problems to attack! Correct answers deal damage. Wrong answers let the enemy hit you. Chain correct answers for combo damage!</p>
+                <h3>قاتل</h3>
+                <p>عندما تواجه عدواً، حل مسائل الرياضيات للهجوم! الإجابات الصحيحة تُلحق الضرر بالعدو. الإجابات الخاطئة تسمح للعدو بضربك. اربط الإجابات الصحيحة للحصول على ضرر متتابع!</p>
             </div>
             <div class="tut-section">
-                <h3>Progress</h3>
-                <p>Earn gold and XP from battles. Buy items from the shop. Unlock new areas by defeating bosses. Find hidden secrets in every world!</p>
+                <h3>التقدم</h3>
+                <p>اكسب الذهب ونقاط الخبرة من المعارك. اشترِ العناصر من المتجر. افتح مناطق جديدة بهزيمة الزعماء. اعثر على أسرار مخفية في كل عالم!</p>
             </div>
-            <button class="btn btn-primary" id="btn-tut-back">Back</button>
+            <button class="btn btn-primary" id="btn-tut-back">رجوع</button>
         </div>
     </div>
 
     <!-- CHARACTER SELECT -->
     <div id="screen-charselect" class="overlay">
         <div class="panel">
-            <h2 class="panel-title">Choose Your Warrior</h2>
+            <h2 class="panel-title">اختر محاربك</h2>
             <div class="char-name-row">
-                <label>Your name:</label>
-                <input type="text" id="player-name" placeholder="Warrior" maxlength="16" autocomplete="off">
+                <label>اسمك:</label>
+                <input type="text" id="player-name" placeholder="محارب" maxlength="16" autocomplete="off">
             </div>
             <div class="char-grid" id="char-grid"></div>
-            <button class="btn btn-primary btn-glow" id="btn-start" disabled>Begin Adventure</button>
+            <button class="btn btn-primary btn-glow" id="btn-start" disabled>ابدأ المغامرة</button>
         </div>
     </div>
 
-    <!-- DIALOG BOX (NPC talk) -->
+    <!-- DIALOG BOX -->
     <div id="dialog-box" class="dialog-box hidden">
-        <div class="dialog-name" id="dialog-name">NPC</div>
-        <div class="dialog-text" id="dialog-text">Hello!</div>
-        <div class="dialog-prompt">SPACE to continue</div>
+        <div class="dialog-name" id="dialog-name">شخصية</div>
+        <div class="dialog-text" id="dialog-text">مرحباً!</div>
+        <div class="dialog-prompt">اضغط المسافة للمتابعة</div>
     </div>
 
     <!-- BATTLE OVERLAY -->
@@ -101,31 +116,31 @@
         <div class="battle-ui">
             <div class="battle-top">
                 <div class="battle-fighter-info">
-                    <span class="bf-name" id="bf-player-name">Player</span>
+                    <span class="bf-name" id="bf-player-name">اللاعب</span>
                     <div class="bf-hp-bar"><div class="bf-hp-fill player-hp" id="bf-player-hp"></div></div>
                     <span class="bf-hp-text" id="bf-player-hp-text">100/100</span>
                     <div class="bf-special-bar"><div class="bf-special-fill" id="bf-special-fill"></div></div>
                 </div>
-                <div class="battle-vs">VS</div>
+                <div class="battle-vs">ضد</div>
                 <div class="battle-fighter-info">
-                    <span class="bf-name" id="bf-enemy-name">Enemy</span>
+                    <span class="bf-name" id="bf-enemy-name">العدو</span>
                     <div class="bf-hp-bar"><div class="bf-hp-fill enemy-hp" id="bf-enemy-hp"></div></div>
                     <span class="bf-hp-text" id="bf-enemy-hp-text">100/100</span>
                 </div>
             </div>
-            <div class="battle-combo" id="battle-combo" style="display:none">COMBO x<span id="combo-num">2</span></div>
-            <div class="battle-question-area">
+            <div class="battle-combo" id="battle-combo" style="display:none">كومبو x<span id="combo-num">2</span></div>
+            <div class="battle-question-area" dir="ltr">
                 <div class="bq-header">
-                    <span class="bq-category" id="bq-category">Arithmetic</span>
+                    <span class="bq-category" id="bq-category">حساب</span>
                     <span class="bq-timer" id="bq-timer">30</span>
                 </div>
-                <div class="bq-text" id="bq-text">Loading...</div>
+                <div class="bq-text" id="bq-text">جارٍ التحميل...</div>
                 <div class="bq-hint" id="bq-hint" style="display:none"></div>
                 <div class="bq-answers" id="bq-answers"></div>
                 <div class="bq-actions">
-                    <button class="btn btn-small btn-ghost" id="btn-hint" style="display:none">Hint</button>
-                    <button class="btn btn-small btn-ghost" id="btn-item" style="display:none">Item</button>
-                    <button class="btn btn-primary" id="btn-submit" disabled>Submit</button>
+                    <button class="btn btn-small btn-ghost" id="btn-hint" style="display:none">تلميح</button>
+                    <button class="btn btn-small btn-ghost" id="btn-item" style="display:none">عنصر</button>
+                    <button class="btn btn-primary" id="btn-submit" disabled>إرسال</button>
                 </div>
             </div>
             <div class="battle-msg" id="battle-msg" style="display:none"></div>
@@ -135,13 +150,13 @@
     <!-- VICTORY OVERLAY -->
     <div id="screen-victory" class="overlay">
         <div class="panel victory-panel">
-            <h2 class="victory-title" id="victory-title">Victory!</h2>
+            <h2 class="victory-title" id="victory-title">انتصار!</h2>
             <div class="victory-stars" id="victory-stars"></div>
             <div class="victory-stats" id="victory-stats"></div>
             <div class="victory-rewards" id="victory-rewards"></div>
             <div class="victory-secret" id="victory-secret" style="display:none"></div>
             <div class="victory-buttons">
-                <button class="btn btn-primary" id="btn-victory-continue">Continue</button>
+                <button class="btn btn-primary" id="btn-victory-continue">متابعة</button>
             </div>
         </div>
     </div>
@@ -149,11 +164,11 @@
     <!-- DEFEAT OVERLAY -->
     <div id="screen-defeat" class="overlay">
         <div class="panel defeat-panel">
-            <h2 class="defeat-title">Defeated!</h2>
-            <p class="defeat-msg">Study the solutions and try again!</p>
+            <h2 class="defeat-title">هُزمت!</h2>
+            <p class="defeat-msg">ادرس الحلول وحاول مرة أخرى!</p>
             <div class="defeat-review" id="defeat-review"></div>
-            <button class="btn btn-primary" id="btn-retry">Try Again</button>
-            <button class="btn btn-ghost" id="btn-retreat">Retreat to Village</button>
+            <button class="btn btn-primary" id="btn-retry">حاول مرة أخرى</button>
+            <button class="btn btn-ghost" id="btn-retreat">انسحب إلى القرية</button>
         </div>
     </div>
 
@@ -161,20 +176,20 @@
     <div id="screen-shop" class="overlay">
         <div class="panel">
             <div class="shop-header">
-                <h2 class="panel-title">Shop</h2>
-                <span class="shop-gold" id="shop-gold-display">0 Gold</span>
+                <h2 class="panel-title">المتجر</h2>
+                <span class="shop-gold" id="shop-gold-display">0 ذهب</span>
             </div>
             <div class="shop-grid" id="shop-grid"></div>
-            <button class="btn btn-ghost" id="btn-shop-close">Close</button>
+            <button class="btn btn-ghost" id="btn-shop-close">إغلاق</button>
         </div>
     </div>
 
     <!-- INVENTORY OVERLAY -->
     <div id="screen-inventory" class="overlay">
         <div class="panel">
-            <h2 class="panel-title">Inventory</h2>
+            <h2 class="panel-title">المخزون</h2>
             <div class="inv-grid" id="inv-grid"></div>
-            <button class="btn btn-ghost" id="btn-inv-close">Close</button>
+            <button class="btn btn-ghost" id="btn-inv-close">إغلاق</button>
         </div>
     </div>
 
@@ -183,8 +198,8 @@
 
     <!-- LEVEL UP OVERLAY -->
     <div id="level-up" class="level-up hidden">
-        <h2>LEVEL UP!</h2>
-        <p id="level-up-text">Level 2</p>
+        <h2>ارتقاء مستوى!</h2>
+        <p id="level-up-text">مستوى 2</p>
     </div>
 
     <script src="js/sound.js"></script>

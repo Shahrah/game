@@ -1,12 +1,13 @@
 /* ============================================
    GAME ENGINE - Loop, Movement, Combat, State
+   Arabic UI version with touch controls
    ============================================ */
 const Game = {
     canvas: null, ctx: null,
     mode: 'title', // title, explore, battle, dialog, menu
     state: null,
     defaultState: {
-        playerName:'Warrior', characterId:'knight', playerLevel:1, xp:0,
+        playerName:'\u0645\u062D\u0627\u0631\u0628', characterId:'knight', playerLevel:1, xp:0,
         gold:100, keys:0, completedEnemies:[], inventory:{}, achievements:[],
         secretsFound:[], totalCorrect:0, totalQuestions:0, totalPurchases:0,
         bossesDefeated:[], speedAnswers:0, currentMap:'village',
@@ -17,9 +18,11 @@ const Game = {
     player: { x:0, y:0, dir:'down', frame:0, moving:false, moveTimer:0 },
     camera: { x:0, y:0 },
     keys: {},
+    touchDir: null,
     currentMap: null,
     mapEnemies: [],
     animFrame: 0,
+    isTouchDevice: false,
 
     // Battle state
     battle: null,
@@ -29,31 +32,43 @@ const Game = {
 
     // ---- Characters data ----
     characters: [
-        { id:'knight', name:'Equation Knight', desc:'Balanced fighter', hp:120, dmg:25, def:10, special:'Shield: block next attack', unlocked:true },
-        { id:'mage', name:'Number Mage', desc:'High damage', hp:90, dmg:35, def:5, special:'Double damage next hit', unlocked:true },
-        { id:'ranger', name:'Fraction Ranger', desc:'Fast attacker', hp:100, dmg:28, def:8, special:'Free extra attack', unlocked:true },
-        { id:'paladin', name:'Geometry Paladin', desc:'Tank with healing', hp:150, dmg:20, def:15, special:'Heal 30% HP', unlocked:true },
+        { id:'knight', name:'\u0641\u0627\u0631\u0633 \u0627\u0644\u0645\u0639\u0627\u062F\u0644\u0627\u062A', desc:'\u0645\u0642\u0627\u062A\u0644 \u0645\u062A\u0648\u0627\u0632\u0646', hp:120, dmg:25, def:10, unlocked:true },
+        { id:'mage', name:'\u0633\u0627\u062D\u0631 \u0627\u0644\u0623\u0631\u0642\u0627\u0645', desc:'\u0636\u0631\u0631 \u0639\u0627\u0644\u064A', hp:90, dmg:35, def:5, unlocked:true },
+        { id:'ranger', name:'\u062D\u0627\u0631\u0633 \u0627\u0644\u0643\u0633\u0648\u0631', desc:'\u0645\u0647\u0627\u062C\u0645 \u0633\u0631\u064A\u0639', hp:100, dmg:28, def:8, unlocked:true },
+        { id:'paladin', name:'\u0641\u0627\u0631\u0633 \u0627\u0644\u0647\u0646\u062F\u0633\u0629', desc:'\u062F\u0628\u0627\u0628\u0629 \u0645\u0639 \u0634\u0641\u0627\u0621', hp:150, dmg:20, def:15, unlocked:true },
     ],
     shopItems: [
-        { id:'health_potion', name:'Health Potion', icon:'HP', desc:'Restores 40 HP', price:50, effect:{type:'heal',value:40}, max:5 },
-        { id:'super_potion', name:'Super Potion', icon:'SP', desc:'Restores 80 HP', price:120, effect:{type:'heal',value:80}, max:3 },
-        { id:'hint_scroll', name:'Hint Scroll', icon:'HS', desc:'Reveals a hint', price:30, effect:{type:'hint'}, max:10 },
-        { id:'shield_charm', name:'Shield Charm', icon:'SC', desc:'Block next attack', price:80, effect:{type:'shield'}, max:3 },
-        { id:'power_gem', name:'Power Gem', icon:'PG', desc:'Next hit x2 damage', price:100, effect:{type:'power',value:2}, max:3 },
+        { id:'health_potion', name:'\u062C\u0631\u0639\u0629 \u0635\u062D\u0629', icon:'\u2764', desc:'\u062A\u0633\u062A\u0639\u064A\u062F 40 \u0635\u062D\u0629', price:50, effect:{type:'heal',value:40}, max:5 },
+        { id:'super_potion', name:'\u062C\u0631\u0639\u0629 \u062E\u0627\u0631\u0642\u0629', icon:'\u2728', desc:'\u062A\u0633\u062A\u0639\u064A\u062F 80 \u0635\u062D\u0629', price:120, effect:{type:'heal',value:80}, max:3 },
+        { id:'hint_scroll', name:'\u0644\u0641\u0627\u0641\u0629 \u062A\u0644\u0645\u064A\u062D', icon:'\u2753', desc:'\u062A\u0643\u0634\u0641 \u062A\u0644\u0645\u064A\u062D\u0627\u064B', price:30, effect:{type:'hint'}, max:10 },
+        { id:'shield_charm', name:'\u062A\u0639\u0648\u064A\u0630\u0629 \u062F\u0631\u0639', icon:'\u26E8', desc:'\u062A\u0635\u062F \u0627\u0644\u0647\u062C\u0648\u0645 \u0627\u0644\u0642\u0627\u062F\u0645', price:80, effect:{type:'shield'}, max:3 },
+        { id:'power_gem', name:'\u062C\u0648\u0647\u0631\u0629 \u0627\u0644\u0642\u0648\u0629', icon:'\u2694', desc:'\u0627\u0644\u0636\u0631\u0628\u0629 \u0627\u0644\u0642\u0627\u062F\u0645\u0629 \u0645\u0636\u0627\u0639\u0641\u0629', price:100, effect:{type:'power',value:2}, max:3 },
     ],
     achievements: [
-        { id:'first_blood', name:'First Blood', desc:'Win your first battle' },
-        { id:'combo5', name:'Combo Master', desc:'Get a 5x combo' },
-        { id:'speed5', name:'Speed Demon', desc:'5 answers under 5 seconds' },
-        { id:'boss_slayer', name:'Boss Slayer', desc:'Defeat a boss' },
-        { id:'chest_finder', name:'Chest Finder', desc:'Open a secret chest' },
-        { id:'all_forest', name:'Forest Cleared', desc:'Defeat all forest enemies' },
-        { id:'all_cave', name:'Cave Cleared', desc:'Defeat all cave enemies' },
-        { id:'all_castle', name:'Castle Cleared', desc:'Defeat all castle enemies' },
-        { id:'math_genius', name:'Math Genius', desc:'100 correct answers' },
-        { id:'game_complete', name:'Champion', desc:'Defeat the Dark Overlord' },
+        { id:'first_blood', name:'\u0627\u0644\u062F\u0645 \u0627\u0644\u0623\u0648\u0644', desc:'\u0627\u0631\u0628\u062D \u0645\u0639\u0631\u0643\u062A\u0643 \u0627\u0644\u0623\u0648\u0644\u0649' },
+        { id:'combo5', name:'\u0633\u064A\u062F \u0627\u0644\u0643\u0648\u0645\u0628\u0648', desc:'\u0627\u062D\u0635\u0644 \u0639\u0644\u0649 \u0643\u0648\u0645\u0628\u0648 5x' },
+        { id:'speed5', name:'\u0627\u0644\u0633\u0631\u0639\u0629 \u0627\u0644\u062E\u0627\u0631\u0642\u0629', desc:'5 \u0625\u062C\u0627\u0628\u0627\u062A \u0641\u064A \u0623\u0642\u0644 \u0645\u0646 5 \u062B\u0648\u0627\u0646\u064D' },
+        { id:'boss_slayer', name:'\u0642\u0627\u062A\u0644 \u0627\u0644\u0632\u0639\u0645\u0627\u0621', desc:'\u0627\u0647\u0632\u0645 \u0632\u0639\u064A\u0645\u0627\u064B' },
+        { id:'chest_finder', name:'\u0635\u064A\u0627\u062F \u0627\u0644\u0643\u0646\u0648\u0632', desc:'\u0627\u0641\u062A\u062D \u0635\u0646\u062F\u0648\u0642 \u0643\u0646\u0632' },
+        { id:'all_forest', name:'\u062A\u0637\u0647\u064A\u0631 \u0627\u0644\u063A\u0627\u0628\u0629', desc:'\u0627\u0647\u0632\u0645 \u062C\u0645\u064A\u0639 \u0623\u0639\u062F\u0627\u0621 \u0627\u0644\u063A\u0627\u0628\u0629' },
+        { id:'all_cave', name:'\u062A\u0637\u0647\u064A\u0631 \u0627\u0644\u0643\u0647\u0641', desc:'\u0627\u0647\u0632\u0645 \u062C\u0645\u064A\u0639 \u0623\u0639\u062F\u0627\u0621 \u0627\u0644\u0643\u0647\u0641' },
+        { id:'all_castle', name:'\u062A\u0637\u0647\u064A\u0631 \u0627\u0644\u0642\u0644\u0639\u0629', desc:'\u0627\u0647\u0632\u0645 \u062C\u0645\u064A\u0639 \u0623\u0639\u062F\u0627\u0621 \u0627\u0644\u0642\u0644\u0639\u0629' },
+        { id:'math_genius', name:'\u0639\u0628\u0642\u0631\u064A \u0627\u0644\u0631\u064A\u0627\u0636\u064A\u0627\u062A', desc:'100 \u0625\u062C\u0627\u0628\u0629 \u0635\u062D\u064A\u062D\u0629' },
+        { id:'game_complete', name:'\u0627\u0644\u0628\u0637\u0644', desc:'\u0627\u0647\u0632\u0645 \u0633\u064A\u062F \u0627\u0644\u0638\u0644\u0627\u0645' },
     ],
     xpTable: [0,100,250,450,700,1000,1400,1900,2500,3200,4000,5000,6500,8000,10000],
+
+    // NPC type labels in Arabic
+    npcLabels: {
+        elder: '\u0627\u0644\u0634\u064A\u062E',
+        shopkeeper: '\u0627\u0644\u062A\u0627\u062C\u0631',
+        guard: '\u0627\u0644\u062D\u0627\u0631\u0633',
+        wizard: '\u0627\u0644\u0633\u0627\u062D\u0631',
+        girl: '\u0627\u0644\u0641\u062A\u0627\u0629',
+        boy: '\u0627\u0644\u0641\u062A\u0649',
+        villager: '\u0642\u0631\u0648\u064A',
+        Sign: '\u0644\u0648\u062D\u0629'
+    },
 
     // ---- Init ----
     init() {
@@ -63,6 +78,7 @@ const Game = {
         window.addEventListener('resize', () => this.resize());
         this.loadState();
         this.setupInput();
+        this.detectTouch();
         this.renderTitleBg();
         requestAnimationFrame(t => this.loop(t));
     },
@@ -72,14 +88,18 @@ const Game = {
         this.canvas.height = window.innerHeight;
     },
 
+    detectTouch() {
+        this.isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    },
+
     // ---- State ----
     loadState() {
-        const s = localStorage.getItem('mathWarriorsState2');
+        const s = localStorage.getItem('mathWarriorsState3');
         if (s) { try { this.state = {...this.defaultState, ...JSON.parse(s)}; } catch(e) { this.state = {...this.defaultState}; } }
         else this.state = {...this.defaultState};
     },
-    saveState() { localStorage.setItem('mathWarriorsState2', JSON.stringify(this.state)); },
-    hasSave() { return !!localStorage.getItem('mathWarriorsState2'); },
+    saveState() { localStorage.setItem('mathWarriorsState3', JSON.stringify(this.state)); },
+    hasSave() { return !!localStorage.getItem('mathWarriorsState3'); },
 
     // ---- Input ----
     setupInput() {
@@ -103,6 +123,80 @@ const Game = {
         document.addEventListener('keyup', e => { this.keys[e.key] = false; });
     },
 
+    // ---- Touch input ----
+    setupTouchControls() {
+        const dpad = document.querySelectorAll('.touch-dpad .touch-btn[data-dir]');
+        dpad.forEach(btn => {
+            const dir = btn.getAttribute('data-dir');
+            const keyMap = { up:'ArrowUp', down:'ArrowDown', left:'ArrowLeft', right:'ArrowRight' };
+
+            btn.addEventListener('touchstart', e => {
+                e.preventDefault();
+                this.keys[keyMap[dir]] = true;
+                this.touchDir = dir;
+            }, {passive:false});
+
+            btn.addEventListener('touchend', e => {
+                e.preventDefault();
+                this.keys[keyMap[dir]] = false;
+                this.touchDir = null;
+            }, {passive:false});
+
+            btn.addEventListener('touchcancel', e => {
+                this.keys[keyMap[dir]] = false;
+                this.touchDir = null;
+            });
+
+            // Mouse fallback for desktop testing
+            btn.addEventListener('mousedown', e => {
+                e.preventDefault();
+                this.keys[keyMap[dir]] = true;
+            });
+            btn.addEventListener('mouseup', e => {
+                this.keys[keyMap[dir]] = false;
+            });
+            btn.addEventListener('mouseleave', e => {
+                this.keys[keyMap[dir]] = false;
+            });
+        });
+
+        // Action button
+        const actBtn = document.getElementById('touch-interact');
+        if (actBtn) {
+            actBtn.addEventListener('touchstart', e => {
+                e.preventDefault();
+                if (this.mode === 'explore') this.interact();
+                if (this.mode === 'dialog') this.advanceDialog();
+            }, {passive:false});
+            actBtn.addEventListener('click', e => {
+                if (this.mode === 'explore') this.interact();
+                if (this.mode === 'dialog') this.advanceDialog();
+            });
+        }
+
+        // Inventory button
+        const invBtn = document.getElementById('touch-inventory');
+        if (invBtn) {
+            invBtn.addEventListener('touchstart', e => {
+                e.preventDefault();
+                if (this.mode === 'explore') this.openInventory();
+            }, {passive:false});
+            invBtn.addEventListener('click', e => {
+                if (this.mode === 'explore') this.openInventory();
+            });
+        }
+    },
+
+    showTouchControls() {
+        const el = document.getElementById('touch-controls');
+        if (el) el.classList.remove('hidden');
+    },
+
+    hideTouchControls() {
+        const el = document.getElementById('touch-controls');
+        if (el) el.classList.add('hidden');
+    },
+
     // ---- Overlays ----
     showOverlay(id) { document.getElementById(id).classList.add('active'); },
     hideOverlay(id) { document.getElementById(id).classList.remove('active'); },
@@ -123,7 +217,7 @@ const Game = {
     // ---- Start New Game ----
     startNewGame(name, charId) {
         this.state = {...this.defaultState};
-        this.state.playerName = name || 'Warrior';
+        this.state.playerName = name || '\u0645\u062D\u0627\u0631\u0628';
         this.state.characterId = charId;
         this.saveState();
     },
@@ -140,10 +234,11 @@ const Game = {
         this.player.frame = 0;
         // Copy enemies that haven't been defeated
         this.mapEnemies = (map.enemies || []).filter(e => !this.state.completedEnemies.includes(e.id)).map(e => ({...e}));
-        // Show HUD
+        // Show HUD and touch controls
         document.getElementById('hud').classList.remove('hidden');
         this.updateHUD();
         document.getElementById('hud-location').textContent = map.name;
+        this.showTouchControls();
         Sound.resume();
         Sound.playMusic(map.music);
     },
@@ -151,11 +246,10 @@ const Game = {
     updateHUD() {
         const s = this.state;
         document.getElementById('hud-name').textContent = s.playerName;
-        document.getElementById('hud-level').textContent = `Lv. ${s.playerLevel}`;
-        document.getElementById('hud-gold').textContent = s.gold + ' G';
-        document.getElementById('hud-keys').textContent = s.keys + ' K';
-        document.getElementById('hud-xp').textContent = s.xp + ' XP';
-        // HP bar
+        document.getElementById('hud-level').textContent = '\u0645. ' + s.playerLevel;
+        document.getElementById('hud-gold').textContent = s.gold + ' \u0630\u0647\u0628';
+        document.getElementById('hud-keys').textContent = s.keys + ' \u0645\u0641\u062A\u0627\u062D';
+        document.getElementById('hud-xp').textContent = s.xp + ' \u062E\u0628\u0631\u0629';
         const stats = this.getPlayerStats();
         document.getElementById('hud-hp-fill').style.width = '100%';
     },
@@ -260,7 +354,7 @@ const Game = {
         this.state.keys++;
         this.state.gold += 50;
         Sound.chest();
-        this.notify('Treasure chest! +1 Key, +50 Gold', 'secret', 4000);
+        this.notify('\u0635\u0646\u062F\u0648\u0642 \u0643\u0646\u0632! +1 \u0645\u0641\u062A\u0627\u062D, +50 \u0630\u0647\u0628', 'secret', 4000);
         this.checkAchievement('chest_finder');
         this.updateHUD();
         this.saveState();
@@ -312,7 +406,6 @@ const Game = {
             ctx.beginPath();
             ctx.arc(e.x * T + T/2, e.y * T + T/2, T/2, 0, Math.PI * 2);
             ctx.fill();
-            // Arrow indicator
             ctx.fillStyle = `rgba(139, 92, 246, ${pulse})`;
             ctx.font = '16px sans-serif';
             ctx.textAlign = 'center';
@@ -340,7 +433,6 @@ const Game = {
     },
 
     drawInteractionHint(ctx, T, map) {
-        // Check adjacent tiles for interactable stuff
         const dirs = [{dx:0,dy:-1},{dx:0,dy:1},{dx:-1,dy:0},{dx:1,dy:0}];
         const fd = dirs.find(d => {
             if (this.player.dir === 'up' && d.dy === -1) return true;
@@ -360,7 +452,7 @@ const Game = {
             ctx.fillStyle = 'rgba(255,255,255,0.8)';
             ctx.font = 'bold 12px sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText(npc ? '[SPACE] Talk' : '[Walk] Fight',
+            ctx.fillText(npc ? '\u062A\u062D\u062F\u062B' : '\u0642\u0627\u062A\u0644',
                 fx * T + T/2, fy * T - 4 + pulse);
         }
     },
@@ -374,7 +466,7 @@ const Game = {
         this.dialogQueue = [...npc.dialog];
         const box = document.getElementById('dialog-box');
         box.classList.remove('hidden');
-        document.getElementById('dialog-name').textContent = npc.type.charAt(0).toUpperCase() + npc.type.slice(1);
+        document.getElementById('dialog-name').textContent = this.npcLabels[npc.type] || npc.type;
         document.getElementById('dialog-text').textContent = this.dialogQueue.shift();
         Sound.npcTalk();
     },
@@ -385,7 +477,6 @@ const Game = {
             Sound.npcTalk();
         } else {
             document.getElementById('dialog-box').classList.add('hidden');
-            // Check for action
             if (this.dialogNPC && this.dialogNPC.action === 'shop') {
                 this.openShop();
             } else {
@@ -402,26 +493,25 @@ const Game = {
         const ty = this.player.y + d.dy;
         const map = Maps.get(this.currentMap);
 
-        // NPC?
         const npc = (map.npcs || []).find(n => n.x === tx && n.y === ty);
         if (npc) { this.startDialog(npc); return; }
 
-        // Sign?
         const tile = Maps.getTile(this.currentMap, tx, ty);
         if (tile === 17) {
             const signs = {
-                village: 'Village Square - Forest lies to the south',
-                forest: 'Deep Forest - Beware of monsters! Cave entrance ahead.',
-                cave: 'Algebra Caverns - Castle beyond.',
-                castle: 'Dark Castle - The Overlord awaits.'
+                village: '\u0633\u0627\u062D\u0629 \u0627\u0644\u0642\u0631\u064A\u0629 - \u0627\u0644\u063A\u0627\u0628\u0629 \u0641\u064A \u0627\u0644\u062C\u0646\u0648\u0628',
+                forest: '\u0627\u0644\u063A\u0627\u0628\u0629 \u0627\u0644\u0639\u0645\u064A\u0642\u0629 - \u0627\u062D\u0630\u0631 \u0645\u0646 \u0627\u0644\u0648\u062D\u0648\u0634! \u0645\u062F\u062E\u0644 \u0627\u0644\u0643\u0647\u0641 \u0642\u0631\u064A\u0628.',
+                cave: '\u0643\u0647\u0648\u0641 \u0627\u0644\u062C\u0628\u0631 - \u0627\u0644\u0642\u0644\u0639\u0629 \u0641\u064A \u0627\u0644\u0623\u0645\u0627\u0645.',
+                castle: '\u0627\u0644\u0642\u0644\u0639\u0629 \u0627\u0644\u0645\u0638\u0644\u0645\u0629 - \u0633\u064A\u062F \u0627\u0644\u0638\u0644\u0627\u0645 \u064A\u0646\u062A\u0638\u0631.'
             };
-            this.startDialog({ type:'Sign', dialog:[signs[this.currentMap] || 'A weathered sign.'], x:tx, y:ty });
+            this.startDialog({ type:'Sign', dialog:[signs[this.currentMap] || '\u0644\u0648\u062D\u0629 \u0642\u062F\u064A\u0645\u0629.'], x:tx, y:ty });
         }
     },
 
     // ---- BATTLE ----
     startBattle(enemyObj) {
         this.mode = 'battle';
+        this.hideTouchControls();
         Sound.stopMusic();
         Sound.playMusic(enemyObj.isBoss ? 'boss' : 'battle');
 
@@ -439,7 +529,6 @@ const Game = {
         };
         this.selectedAnswer = null;
 
-        // Set up battle UI
         document.getElementById('bf-player-name').textContent = this.state.playerName;
         document.getElementById('bf-enemy-name').textContent = enemyObj.enemyData.name;
         this.updateBattleUI();
@@ -476,7 +565,6 @@ const Game = {
         b.total++;
         this.selectedAnswer = null;
 
-        // Render question
         document.getElementById('bq-category').textContent = this.getCatLabel(prob);
         document.getElementById('bq-text').textContent = prob.question;
         document.getElementById('bq-hint').style.display = 'none';
@@ -496,15 +584,13 @@ const Game = {
         });
         document.getElementById('btn-submit').disabled = true;
 
-        // Hint button
         const hintBtn = document.getElementById('btn-hint');
         hintBtn.style.display = (this.state.inventory.hint_scroll || 0) > 0 ? 'inline-block' : 'none';
 
-        // Timer
         const limit = b.enemy.difficulty === 'hard' ? 25 : b.enemy.difficulty === 'medium' ? 30 : 35;
         this.startTimer(limit, () => this.processAnswer(false));
 
-        if (isBonus) this.notify('Bonus Problem! Solve for a key!', 'secret', 2000);
+        if (isBonus) this.notify('\u0633\u0624\u0627\u0644 \u0625\u0636\u0627\u0641\u064A! \u062D\u0644\u0647 \u0644\u0644\u062D\u0635\u0648\u0644 \u0639\u0644\u0649 \u0645\u0641\u062A\u0627\u062D!', 'secret', 2000);
     },
 
     submitAnswer() {
@@ -544,13 +630,13 @@ const Game = {
             b.enemyHp -= dmg;
             Sound.attack();
             if (b.combo >= 3) Sound.combo();
-            this.showBattleMsg(crit ? `CRITICAL! -${dmg} HP` : `-${dmg} HP`, 'green');
+            this.showBattleMsg(crit ? `\u0636\u0631\u0628\u0629 \u062D\u0631\u062C\u0629! -${dmg}` : `-${dmg} \u0635\u062D\u0629`, 'green');
             this.shakeScreen();
 
             if (prob.isBonus) {
                 b.keysEarned++;
                 this.state.keys++;
-                this.notify('You earned a key!', 'secret');
+                this.notify('\u062D\u0635\u0644\u062A \u0639\u0644\u0649 \u0645\u0641\u062A\u0627\u062D!', 'secret');
             }
 
             setTimeout(() => {
@@ -561,14 +647,14 @@ const Game = {
             b.combo = 0;
             b.wrongAnswers.push({ question: prob.question, correctAnswer: prob.correctAnswer });
             let eDmg = b.shieldActive ? 0 : Math.max(3, b.enemyDmg - b.playerDef);
-            if (b.shieldActive) { b.shieldActive = false; this.showBattleMsg('Shield absorbed!', 'cyan'); }
-            else { this.showBattleMsg(`Enemy hits! -${eDmg} HP`, 'red'); }
+            if (b.shieldActive) { b.shieldActive = false; this.showBattleMsg('\u0627\u0644\u062F\u0631\u0639 \u0627\u0645\u062A\u0635 \u0627\u0644\u0636\u0631\u0628\u0629!', 'cyan'); }
+            else { this.showBattleMsg(`\u0627\u0644\u0639\u062F\u0648 \u0636\u0631\u0628\u0643! -${eDmg}`, 'red'); }
             b.playerHp -= eDmg;
             Sound.hit();
             this.shakeScreen();
 
             setTimeout(() => {
-                this.showBattleMsg(`Answer: ${prob.correctAnswer}`, 'white');
+                this.showBattleMsg(`\u0627\u0644\u062C\u0648\u0627\u0628: ${prob.correctAnswer}`, 'white');
                 this.updateBattleUI();
                 setTimeout(() => this.nextQuestion(), 1500);
             }, 800);
@@ -605,22 +691,21 @@ const Game = {
         this.checkAllAchievements();
         this.saveState();
 
-        // Victory screen
-        document.getElementById('victory-title').textContent = b.enemy.isBoss ? 'Boss Defeated!' : 'Victory!';
+        document.getElementById('victory-title').textContent = b.enemy.isBoss ? '\u062A\u0645 \u0647\u0632\u064A\u0645\u0629 \u0627\u0644\u0632\u0639\u064A\u0645!' : '\u0627\u0646\u062A\u0635\u0627\u0631!';
         document.getElementById('victory-stars').innerHTML = [1,2,3].map(s =>
             `<span class="${s<=stars?'star-on':'star-off'}">\u2605</span>`).join('');
         document.getElementById('victory-stats').innerHTML = `
-            <div class="vs-item"><span class="vs-label">Correct</span><span class="vs-val">${b.correct}/${b.total}</span></div>
-            <div class="vs-item"><span class="vs-label">Best Combo</span><span class="vs-val">${b.bestCombo}x</span></div>
-            <div class="vs-item"><span class="vs-label">Gold</span><span class="vs-val gold-val">+${gold}</span></div>
-            <div class="vs-item"><span class="vs-label">XP</span><span class="vs-val xp-val">+${xp}</span></div>`;
-        document.getElementById('victory-rewards').innerHTML = `<h4>Rewards</h4>
-            <div>+${gold} Gold, +${xp} XP${b.keysEarned?' ,+'+b.keysEarned+' Key(s)':''}</div>
-            ${acc===1?'<div>Perfect Battle Bonus!</div>':''}`;
+            <div class="vs-item"><span class="vs-label">\u0635\u062D\u064A\u062D</span><span class="vs-val">${b.correct}/${b.total}</span></div>
+            <div class="vs-item"><span class="vs-label">\u0623\u0641\u0636\u0644 \u0643\u0648\u0645\u0628\u0648</span><span class="vs-val">${b.bestCombo}x</span></div>
+            <div class="vs-item"><span class="vs-label">\u0630\u0647\u0628</span><span class="vs-val gold-val">+${gold}</span></div>
+            <div class="vs-item"><span class="vs-label">\u062E\u0628\u0631\u0629</span><span class="vs-val xp-val">+${xp}</span></div>`;
+        document.getElementById('victory-rewards').innerHTML = `<h4>\u0627\u0644\u0645\u0643\u0627\u0641\u0622\u062A</h4>
+            <div>+${gold} \u0630\u0647\u0628, +${xp} \u062E\u0628\u0631\u0629${b.keysEarned?' ,+'+b.keysEarned+' \u0645\u0641\u062A\u0627\u062D':''}</div>
+            ${acc===1?'<div>\u0645\u0643\u0627\u0641\u0623\u0629 \u0627\u0644\u0645\u0639\u0631\u0643\u0629 \u0627\u0644\u0645\u062B\u0627\u0644\u064A\u0629!</div>':''}`;
 
         if (b.enemy.isFinalBoss) {
             document.getElementById('victory-secret').style.display = 'block';
-            document.getElementById('victory-secret').innerHTML = '<h4>Congratulations!</h4><p>You have defeated the Dark Overlord and saved the realm with the power of mathematics!</p>';
+            document.getElementById('victory-secret').innerHTML = '<h4>\u062A\u0647\u0627\u0646\u064A\u0646\u0627!</h4><p>\u0644\u0642\u062F \u0647\u0632\u0645\u062A \u0633\u064A\u062F \u0627\u0644\u0638\u0644\u0627\u0645 \u0648\u0623\u0646\u0642\u0630\u062A \u0627\u0644\u0645\u0645\u0644\u0643\u0629 \u0628\u0642\u0648\u0629 \u0627\u0644\u0631\u064A\u0627\u0636\u064A\u0627\u062A!</p>';
         } else {
             document.getElementById('victory-secret').style.display = 'none';
         }
@@ -644,9 +729,9 @@ const Game = {
 
         let html = '';
         b.wrongAnswers.forEach(w => {
-            html += `<div class="review-item"><div class="review-q">${w.question}</div><div class="review-a">Answer: ${w.correctAnswer}</div></div>`;
+            html += `<div class="review-item"><div class="review-q">${w.question}</div><div class="review-a">\u0627\u0644\u062C\u0648\u0627\u0628: ${w.correctAnswer}</div></div>`;
         });
-        document.getElementById('defeat-review').innerHTML = html || '<p style="color:var(--muted)">You ran out of HP!</p>';
+        document.getElementById('defeat-review').innerHTML = html || '<p style="color:var(--muted)">\u0646\u0641\u062F\u062A \u0635\u062D\u062A\u0643!</p>';
         this.showOverlay('screen-defeat');
     },
 
@@ -692,19 +777,19 @@ const Game = {
 
     getCatLabel(p) {
         const q = p.question.toLowerCase();
-        if (q.includes('fraction') || (q.includes('/') && !q.includes('solve'))) return 'Fractions';
-        if (q.includes('percent')) return 'Percentages';
-        if (q.includes('solve')) return 'Algebra';
-        if (q.includes('area') || q.includes('perimeter')) return 'Geometry';
-        if (q.includes('angle')) return 'Angles';
-        if (q.includes('triangle') || q.includes('hypotenuse')) return 'Pythagoras';
-        if (q.includes('mean') || q.includes('median') || q.includes('mode')) return 'Statistics';
-        if (q.includes('probability') || q.includes('die') || q.includes('coin') || q.includes('bag')) return 'Probability';
-        if (q.includes('\u221A') || q.includes('\u00B2')) return 'Powers & Roots';
-        if (q.includes('ratio')) return 'Ratios';
-        if (q.includes('bodmas') || (q.includes('(') && q.includes(')'))) return 'BODMAS';
-        if (q.includes('if x')) return 'Expressions';
-        return 'Arithmetic';
+        if (q.includes('fraction') || q.includes('\u0643\u0633\u0631') || (q.includes('/') && !q.includes('solve') && !q.includes('\u062D\u0644'))) return '\u0643\u0633\u0648\u0631';
+        if (q.includes('percent') || q.includes('%')) return '\u0646\u0633\u0628 \u0645\u0626\u0648\u064A\u0629';
+        if (q.includes('solve') || q.includes('\u062D\u0644') || q.includes('\u0623\u0648\u062C\u062F x')) return '\u062C\u0628\u0631';
+        if (q.includes('area') || q.includes('perimeter') || q.includes('\u0645\u0633\u0627\u062D\u0629') || q.includes('\u0645\u062D\u064A\u0637')) return '\u0647\u0646\u062F\u0633\u0629';
+        if (q.includes('angle') || q.includes('\u0632\u0627\u0648\u064A\u0629')) return '\u0632\u0648\u0627\u064A\u0627';
+        if (q.includes('triangle') || q.includes('hypotenuse') || q.includes('\u0645\u062B\u0644\u062B') || q.includes('\u0648\u062A\u0631')) return '\u0641\u064A\u062B\u0627\u063A\u0648\u0631\u0633';
+        if (q.includes('mean') || q.includes('median') || q.includes('mode') || q.includes('\u0645\u062A\u0648\u0633\u0637') || q.includes('\u0648\u0633\u064A\u0637')) return '\u0625\u062D\u0635\u0627\u0621';
+        if (q.includes('probability') || q.includes('\u0627\u062D\u062A\u0645\u0627\u0644') || q.includes('\u0646\u0631\u062F') || q.includes('\u0639\u0645\u0644\u0629')) return '\u0627\u062D\u062A\u0645\u0627\u0644\u0627\u062A';
+        if (q.includes('\u221A') || q.includes('\u00B2') || q.includes('\u062C\u0630\u0631') || q.includes('\u0623\u0633')) return '\u0642\u0648\u0649 \u0648\u062C\u0630\u0648\u0631';
+        if (q.includes('ratio') || q.includes('\u0646\u0633\u0628\u0629')) return '\u0646\u0633\u0628';
+        if (q.includes('bodmas') || q.includes('\u0623\u0648\u0644\u0648\u064A\u0629') || (q.includes('(') && q.includes(')'))) return '\u0623\u0648\u0644\u0648\u064A\u0629 \u0627\u0644\u0639\u0645\u0644\u064A\u0627\u062A';
+        if (q.includes('if x') || q.includes('\u0625\u0630\u0627 \u0643\u0627\u0646')) return '\u062A\u0639\u0628\u064A\u0631\u0627\u062A';
+        return '\u062D\u0633\u0627\u0628';
     },
 
     // ---- Progression ----
@@ -716,7 +801,7 @@ const Game = {
 
     showLevelUp(lv) {
         const el = document.getElementById('level-up');
-        document.getElementById('level-up-text').textContent = `Level ${lv}`;
+        document.getElementById('level-up-text').textContent = '\u0645\u0633\u062A\u0648\u0649 ' + lv;
         el.classList.remove('hidden');
         Sound.levelUp();
         setTimeout(() => el.classList.add('hidden'), 2500);
@@ -729,7 +814,7 @@ const Game = {
             if (s.achievements.includes(id)) return;
             s.achievements.push(id);
             const a = this.achievements.find(a => a.id === id);
-            if (a) this.notify(`Achievement: ${a.name}!`, 'secret', 4000);
+            if (a) this.notify('\u0625\u0646\u062C\u0627\u0632: ' + a.name + '!', 'secret', 4000);
         };
         if (s.completedEnemies.length >= 1) unlock('first_blood');
         if (this.battle && this.battle.bestCombo >= 5) unlock('combo5');
@@ -737,7 +822,6 @@ const Game = {
         if (s.bossesDefeated.length >= 1) unlock('boss_slayer');
         if (s.secretsFound.length >= 1) unlock('chest_finder');
         if (s.totalCorrect >= 100) unlock('math_genius');
-        // Area clears
         const forestEnemies = Maps.forest.enemies.map(e => e.id);
         if (forestEnemies.every(id => s.completedEnemies.includes(id))) unlock('all_forest');
         const caveEnemies = Maps.cave.enemies.map(e => e.id);
@@ -751,13 +835,13 @@ const Game = {
         if (this.state.achievements.includes(id)) return;
         this.state.achievements.push(id);
         const a = this.achievements.find(a => a.id === id);
-        if (a) this.notify(`Achievement: ${a.name}!`, 'secret', 4000);
+        if (a) this.notify('\u0625\u0646\u062C\u0627\u0632: ' + a.name + '!', 'secret', 4000);
     },
 
     // ---- Shop ----
     openShop() {
         this.mode = 'menu';
-        document.getElementById('shop-gold-display').textContent = this.state.gold + ' Gold';
+        document.getElementById('shop-gold-display').textContent = this.state.gold + ' \u0630\u0647\u0628';
         const grid = document.getElementById('shop-grid');
         grid.innerHTML = '';
         this.shopItems.forEach(item => {
@@ -766,16 +850,16 @@ const Game = {
             const card = document.createElement('div');
             card.className = `shop-card ${canBuy ? '' : 'sold-out'}`;
             card.innerHTML = `<div class="shop-icon">${item.icon}</div><h4>${item.name}</h4>
-                <p>${item.desc}</p><p style="font-size:.65rem;color:var(--muted)">Owned: ${owned}/${item.max}</p>
-                <div class="shop-price">${item.price} G</div>`;
+                <p>${item.desc}</p><p style="font-size:.65rem;color:var(--muted)">\u0645\u0645\u0644\u0648\u0643: ${owned}/${item.max}</p>
+                <div class="shop-price">${item.price} \u0630\u0647\u0628</div>`;
             if (canBuy) card.onclick = () => {
                 this.state.gold -= item.price;
                 this.state.inventory[item.id] = owned + 1;
                 this.state.totalPurchases++;
                 this.saveState();
                 Sound.confirm();
-                this.notify(`Bought ${item.name}!`, 'success');
-                this.openShop(); // refresh
+                this.notify('\u0627\u0634\u062A\u0631\u064A\u062A ' + item.name + '!', 'success');
+                this.openShop();
             };
             grid.appendChild(card);
         });
@@ -804,7 +888,7 @@ const Game = {
             card.innerHTML = `<div class="inv-icon">${item.icon}</div><h4>${item.name}</h4><div class="inv-count">x${count}</div>`;
             grid.appendChild(card);
         });
-        if (!has) grid.innerHTML = '<div class="inv-empty">No items yet. Visit the shop in the village!</div>';
+        if (!has) grid.innerHTML = '<div class="inv-empty">\u0644\u0627 \u0639\u0646\u0627\u0635\u0631 \u0628\u0639\u062F. \u0632\u0631 \u0627\u0644\u0645\u062A\u062C\u0631 \u0641\u064A \u0627\u0644\u0642\u0631\u064A\u0629!</div>';
         this.showOverlay('screen-inventory');
     },
 
@@ -820,18 +904,15 @@ const Game = {
         c.height = window.innerHeight;
         const ctx = c.getContext('2d');
 
-        // Starfield background
         ctx.fillStyle = '#0a0e1a';
         ctx.fillRect(0, 0, c.width, c.height);
 
-        // Gradient
         const g = ctx.createRadialGradient(c.width/2, c.height*0.3, 0, c.width/2, c.height*0.3, c.width*0.6);
         g.addColorStop(0, 'rgba(139,92,246,0.08)');
         g.addColorStop(1, 'transparent');
         ctx.fillStyle = g;
         ctx.fillRect(0, 0, c.width, c.height);
 
-        // Math symbols floating
         ctx.fillStyle = 'rgba(139,92,246,0.12)';
         ctx.font = '24px monospace';
         const syms = ['+','-','\u00D7','\u00F7','=','\u03C0','\u221A','\u03A3','\u221E','\u0394','x','y','\u00B2'];
@@ -840,7 +921,6 @@ const Game = {
                 Math.random() * c.width, Math.random() * c.height);
         }
 
-        // Draw sample characters
         const cx = c.width / 2;
         Sprites.drawCharacter(ctx, cx - 80, c.height * 0.65, 'knight', 'down', 0, 2);
         Sprites.drawCharacter(ctx, cx - 20, c.height * 0.63, 'mage', 'down', 0, 2);
@@ -857,17 +937,27 @@ const Game = {
         this.characters.forEach(ch => {
             const card = document.createElement('div');
             card.className = `char-card ${ch.unlocked ? '' : 'locked'}`;
+
             // Mini canvas for character preview
             const miniC = document.createElement('canvas');
             miniC.width = 48; miniC.height = 48;
             const mctx = miniC.getContext('2d');
             mctx.imageSmoothingEnabled = false;
             Sprites.drawCharacter(mctx, 8, 8, ch.id, 'down', 0);
+
             const av = document.createElement('div');
             av.className = 'char-avatar';
             av.appendChild(miniC);
             card.appendChild(av);
-            card.innerHTML += `<h4>${ch.name}</h4><p>${ch.desc}</p>`;
+
+            // Use DOM methods instead of innerHTML+= to preserve canvas
+            const nameEl = document.createElement('h4');
+            nameEl.textContent = ch.name;
+            card.appendChild(nameEl);
+
+            const descEl = document.createElement('p');
+            descEl.textContent = ch.desc;
+            card.appendChild(descEl);
 
             if (ch.unlocked) {
                 card.onclick = () => {

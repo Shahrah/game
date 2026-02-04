@@ -9,12 +9,12 @@
 const Maps = {
 
     // Walkable tile types
-    walkable: new Set([0, 1, 6, 7, 12, 14, 15, 16, 18]),
+    walkable: new Set([0, 1, 6, 7, 8, 12, 14, 15, 16, 18]),
     interactable: new Set([6, 8, 17, 18]),
 
     // ---- VILLAGE MAP ---- (30x22)
     village: {
-        name: 'Peaceful Village',
+        name: '\u0627\u0644\u0642\u0631\u064A\u0629 \u0627\u0644\u0647\u0627\u062F\u0626\u0629',
         music: 'village',
         width: 30,
         height: 22,
@@ -45,32 +45,32 @@ const Maps = {
         ],
         npcs: [
             { id:'elder', type:'elder', x:14, y:3, dir:'down', dialog:[
-                'Welcome, warrior! Our village is under threat.',
-                'Monsters have invaded the forest to the south.',
-                'Defeat them by solving math problems!',
-                'The harder the problem, the more damage you deal.',
-                'Go south to enter the forest. Good luck!'
+                '\u0645\u0631\u062D\u0628\u0627\u064B \u0623\u064A\u0647\u0627 \u0627\u0644\u0645\u062D\u0627\u0631\u0628! \u0642\u0631\u064A\u062A\u0646\u0627 \u0641\u064A \u062E\u0637\u0631.',
+                '\u0627\u0644\u0648\u062D\u0648\u0634 \u063A\u0632\u062A \u0627\u0644\u063A\u0627\u0628\u0629 \u0641\u064A \u0627\u0644\u062C\u0646\u0648\u0628.',
+                '\u0627\u0647\u0632\u0645\u0647\u0645 \u0628\u062D\u0644 \u0645\u0633\u0627\u0626\u0644 \u0627\u0644\u0631\u064A\u0627\u0636\u064A\u0627\u062A!',
+                '\u0643\u0644\u0645\u0627 \u0643\u0627\u0646\u062A \u0627\u0644\u0645\u0633\u0623\u0644\u0629 \u0623\u0635\u0639\u0628\u060C \u0632\u0627\u062F \u0627\u0644\u0636\u0631\u0631 \u0627\u0644\u0630\u064A \u062A\u064F\u0644\u062D\u0642\u0647.',
+                '\u0627\u0630\u0647\u0628 \u062C\u0646\u0648\u0628\u0627\u064B \u0644\u062F\u062E\u0648\u0644 \u0627\u0644\u063A\u0627\u0628\u0629. \u0628\u0627\u0644\u062A\u0648\u0641\u064A\u0642!'
             ]},
             { id:'shopkeeper', type:'shopkeeper', x:4, y:9, dir:'right', dialog:[
-                'Welcome to my shop! I have potions and items.',
-                'Earn gold by defeating enemies in battle.'
+                '\u0645\u0631\u062D\u0628\u0627\u064B \u0628\u0645\u062A\u062C\u0631\u064A! \u0644\u062F\u064A \u062C\u0631\u0639\u0627\u062A \u0648\u0639\u0646\u0627\u0635\u0631.',
+                '\u0627\u0643\u0633\u0628 \u0627\u0644\u0630\u0647\u0628 \u0628\u0647\u0632\u064A\u0645\u0629 \u0627\u0644\u0623\u0639\u062F\u0627\u0621 \u0641\u064A \u0627\u0644\u0645\u0639\u0631\u0643\u0629.'
             ], action:'shop'},
             { id:'guard1', type:'guard', x:13, y:20, dir:'down', dialog:[
-                'The forest lies beyond this path.',
-                'Be careful, warrior. Monsters lurk there.'
+                '\u0627\u0644\u063A\u0627\u0628\u0629 \u062A\u0642\u0639 \u0645\u0627 \u0648\u0631\u0627\u0621 \u0647\u0630\u0627 \u0627\u0644\u0637\u0631\u064A\u0642.',
+                '\u0643\u0646 \u062D\u0630\u0631\u0627\u064B \u0623\u064A\u0647\u0627 \u0627\u0644\u0645\u062D\u0627\u0631\u0628. \u0627\u0644\u0648\u062D\u0648\u0634 \u062A\u062A\u0631\u0628\u0635 \u0647\u0646\u0627\u0643.'
             ]},
             { id:'girl1', type:'girl', x:20, y:4, dir:'left', dialog:[
-                'I heard there are secret chests hidden in the forest!',
-                'You need to find them to unlock special rewards.'
+                '\u0633\u0645\u0639\u062A \u0623\u0646 \u0647\u0646\u0627\u0643 \u0635\u0646\u0627\u062F\u064A\u0642 \u0633\u0631\u064A\u0629 \u0645\u062E\u0628\u0623\u0629 \u0641\u064A \u0627\u0644\u063A\u0627\u0628\u0629!',
+                '\u064A\u062C\u0628 \u0623\u0646 \u062A\u062C\u062F\u0647\u0627 \u0644\u0644\u062D\u0635\u0648\u0644 \u0639\u0644\u0649 \u0645\u0643\u0627\u0641\u0622\u062A \u062E\u0627\u0635\u0629.'
             ]},
             { id:'boy1', type:'boy', x:9, y:14, dir:'down', dialog:[
-                'Did you know? If you answer quickly, you deal more damage!',
-                'Try to solve problems in under 5 seconds!'
+                '\u0647\u0644 \u062A\u0639\u0644\u0645\u061F \u0625\u0630\u0627 \u0623\u062C\u0628\u062A \u0628\u0633\u0631\u0639\u0629\u060C \u062A\u0644\u062D\u0642 \u0636\u0631\u0631\u0627\u064B \u0623\u0643\u0628\u0631!',
+                '\u062D\u0627\u0648\u0644 \u062D\u0644 \u0627\u0644\u0645\u0633\u0627\u0626\u0644 \u0641\u064A \u0623\u0642\u0644 \u0645\u0646 5 \u062B\u0648\u0627\u0646\u064D!'
             ]},
             { id:'wizard1', type:'wizard', x:24, y:9, dir:'left', dialog:[
-                'I sense great mathematical power in you...',
-                'Chain correct answers for COMBO damage!',
-                'A 5x combo unlocks an achievement.'
+                '\u0623\u0634\u0639\u0631 \u0628\u0642\u0648\u0629 \u0631\u064A\u0627\u0636\u064A\u0629 \u0639\u0638\u064A\u0645\u0629 \u0641\u064A\u0643...',
+                '\u0627\u0631\u0628\u0637 \u0627\u0644\u0625\u062C\u0627\u0628\u0627\u062A \u0627\u0644\u0635\u062D\u064A\u062D\u0629 \u0644\u0644\u062D\u0635\u0648\u0644 \u0639\u0644\u0649 \u0636\u0631\u0631 \u0643\u0648\u0645\u0628\u0648!',
+                '\u0643\u0648\u0645\u0628\u0648 5x \u064A\u0641\u062A\u062D \u0625\u0646\u062C\u0627\u0632\u0627\u064B.'
             ]},
         ],
         enemies: [],
@@ -81,7 +81,7 @@ const Maps = {
 
     // ---- FOREST MAP ---- (32x24)
     forest: {
-        name: 'Dark Forest',
+        name: '\u0627\u0644\u063A\u0627\u0628\u0629 \u0627\u0644\u0645\u0638\u0644\u0645\u0629',
         music: 'forest',
         width: 32,
         height: 24,
@@ -114,18 +114,18 @@ const Maps = {
         ],
         npcs: [
             { id:'forest_wizard', type:'wizard', x:14, y:8, dir:'down', dialog:[
-                'This forest is full of equations to solve...',
-                'The deeper you go, the harder they get!',
-                'Look for golden chests - they hold keys to secrets.'
+                '\u0647\u0630\u0647 \u0627\u0644\u063A\u0627\u0628\u0629 \u0645\u0644\u064A\u0626\u0629 \u0628\u0627\u0644\u0645\u0639\u0627\u062F\u0644\u0627\u062A \u0627\u0644\u062A\u064A \u064A\u062C\u0628 \u062D\u0644\u0647\u0627...',
+                '\u0643\u0644\u0645\u0627 \u062A\u0639\u0645\u0642\u062A\u060C \u0632\u0627\u062F\u062A \u0627\u0644\u0635\u0639\u0648\u0628\u0629!',
+                '\u0627\u0628\u062D\u062B \u0639\u0646 \u0627\u0644\u0635\u0646\u0627\u062F\u064A\u0642 \u0627\u0644\u0630\u0647\u0628\u064A\u0629 - \u0641\u064A\u0647\u0627 \u0645\u0641\u0627\u062A\u064A\u062D \u0627\u0644\u0623\u0633\u0631\u0627\u0631.'
             ]},
         ],
         enemies: [
-            { id:'e1', type:'slime', x:5, y:5, enemyData:{ name:'Forest Slime', hp:60, damage:10, defense:2 }, topics:['addition','subtraction'], difficulty:'easy' },
-            { id:'e2', type:'skeleton', x:22, y:4, enemyData:{ name:'Skeleton Scout', hp:80, damage:14, defense:3 }, topics:['multiplication','division'], difficulty:'easy' },
-            { id:'e3', type:'sprite', x:8, y:11, enemyData:{ name:'Forest Sprite', hp:70, damage:12, defense:3 }, topics:['fractions'], difficulty:'easy' },
-            { id:'e4', type:'wolf', x:24, y:10, enemyData:{ name:'Shadow Wolf', hp:100, damage:18, defense:5 }, topics:['bodmas','multiplication'], difficulty:'medium' },
-            { id:'e5', type:'darkKnight', x:10, y:16, enemyData:{ name:'Dark Knight', hp:120, damage:20, defense:6 }, topics:['bodmas','division','fractions'], difficulty:'medium' },
-            { id:'e_boss1', type:'treant', x:14, y:20, enemyData:{ name:'Ancient Treant', hp:180, damage:24, defense:8 }, topics:['fractions','percentages','bodmas'], difficulty:'medium', isBoss:true },
+            { id:'e1', type:'slime', x:5, y:5, enemyData:{ name:'\u0647\u0644\u0627\u0645 \u0627\u0644\u063A\u0627\u0628\u0629', hp:60, damage:10, defense:2 }, topics:['addition','subtraction'], difficulty:'easy' },
+            { id:'e2', type:'skeleton', x:22, y:4, enemyData:{ name:'\u0647\u064A\u0643\u0644 \u0639\u0638\u0645\u064A \u0643\u0634\u0627\u0641', hp:80, damage:14, defense:3 }, topics:['multiplication','division'], difficulty:'easy' },
+            { id:'e3', type:'sprite', x:8, y:11, enemyData:{ name:'\u062C\u0646\u064A\u0629 \u0627\u0644\u063A\u0627\u0628\u0629', hp:70, damage:12, defense:3 }, topics:['fractions'], difficulty:'easy' },
+            { id:'e4', type:'wolf', x:24, y:10, enemyData:{ name:'\u0630\u0626\u0628 \u0627\u0644\u0638\u0644', hp:100, damage:18, defense:5 }, topics:['bodmas','multiplication'], difficulty:'medium' },
+            { id:'e5', type:'darkKnight', x:10, y:16, enemyData:{ name:'\u0627\u0644\u0641\u0627\u0631\u0633 \u0627\u0644\u0645\u0638\u0644\u0645', hp:120, damage:20, defense:6 }, topics:['bodmas','division','fractions'], difficulty:'medium' },
+            { id:'e_boss1', type:'treant', x:14, y:20, enemyData:{ name:'\u0627\u0644\u0634\u062C\u0631\u0629 \u0627\u0644\u0642\u062F\u064A\u0645\u0629', hp:180, damage:24, defense:8 }, topics:['fractions','percentages','bodmas'], difficulty:'medium', isBoss:true },
         ],
         exits: [
             { x:14, y:0, toMap:'village', toX:14, toY:20 },
@@ -135,7 +135,7 @@ const Maps = {
 
     // ---- CAVE MAP ---- (28x20)
     cave: {
-        name: 'Algebra Caverns',
+        name: '\u0643\u0647\u0648\u0641 \u0627\u0644\u062C\u0628\u0631',
         music: 'cave',
         width: 28,
         height: 20,
@@ -164,18 +164,18 @@ const Maps = {
         ],
         npcs: [
             { id:'cave_wizard', type:'wizard', x:14, y:9, dir:'down', dialog:[
-                'You have entered the Algebra Caverns!',
-                'Equations lurk in every shadow.',
-                'Solve for x to survive!',
-                'Deeper in lies the castle of the Dark Overlord...'
+                '\u0644\u0642\u062F \u062F\u062E\u0644\u062A \u0643\u0647\u0648\u0641 \u0627\u0644\u062C\u0628\u0631!',
+                '\u0627\u0644\u0645\u0639\u0627\u062F\u0644\u0627\u062A \u062A\u0643\u0645\u0646 \u0641\u064A \u0643\u0644 \u0638\u0644.',
+                '\u062D\u0644 \u0645\u0639\u0627\u062F\u0644\u0627\u062A x \u0644\u0644\u0628\u0642\u0627\u0621!',
+                '\u0641\u064A \u0627\u0644\u0623\u0639\u0645\u0627\u0642 \u062A\u0642\u0639 \u0642\u0644\u0639\u0629 \u0633\u064A\u062F \u0627\u0644\u0638\u0644\u0627\u0645...'
             ]},
         ],
         enemies: [
-            { id:'e6', type:'wraith', x:4, y:4, enemyData:{ name:'Abyss Wraith', hp:120, damage:20, defense:5 }, topics:['linear_equations'], difficulty:'medium' },
-            { id:'e7', type:'mage', x:22, y:5, enemyData:{ name:'Dark Mage', hp:110, damage:25, defense:4 }, topics:['linear_equations','expressions'], difficulty:'medium' },
-            { id:'e8', type:'golem', x:5, y:12, enemyData:{ name:'Stone Golem', hp:160, damage:22, defense:10 }, topics:['area_perimeter','angles'], difficulty:'medium' },
-            { id:'e9', type:'wraith', x:22, y:14, enemyData:{ name:'Phantom', hp:130, damage:28, defense:4 }, topics:['quadratics','linear_equations'], difficulty:'hard' },
-            { id:'e_boss2', type:'lich', x:14, y:17, enemyData:{ name:'The Lich King', hp:240, damage:30, defense:10 }, topics:['quadratics','linear_equations','expressions'], difficulty:'hard', isBoss:true },
+            { id:'e6', type:'wraith', x:4, y:4, enemyData:{ name:'\u0634\u0628\u062D \u0627\u0644\u0647\u0627\u0648\u064A\u0629', hp:120, damage:20, defense:5 }, topics:['linear_equations'], difficulty:'medium' },
+            { id:'e7', type:'mage', x:22, y:5, enemyData:{ name:'\u0627\u0644\u0633\u0627\u062D\u0631 \u0627\u0644\u0645\u0638\u0644\u0645', hp:110, damage:25, defense:4 }, topics:['linear_equations','expressions'], difficulty:'medium' },
+            { id:'e8', type:'golem', x:5, y:12, enemyData:{ name:'\u062C\u0648\u0644\u0645 \u062D\u062C\u0631\u064A', hp:160, damage:22, defense:10 }, topics:['area_perimeter','angles'], difficulty:'medium' },
+            { id:'e9', type:'wraith', x:22, y:14, enemyData:{ name:'\u0627\u0644\u0634\u0628\u062D', hp:130, damage:28, defense:4 }, topics:['quadratics','linear_equations'], difficulty:'hard' },
+            { id:'e_boss2', type:'lich', x:14, y:17, enemyData:{ name:'\u0645\u0644\u0643 \u0627\u0644\u0623\u0634\u0628\u0627\u062D', hp:240, damage:30, defense:10 }, topics:['quadratics','linear_equations','expressions'], difficulty:'hard', isBoss:true },
         ],
         exits: [
             { x:14, y:0, toMap:'forest', toX:14, toY:22 },
@@ -185,7 +185,7 @@ const Maps = {
 
     // ---- CASTLE MAP ---- (26x20)
     castle: {
-        name: 'Dark Castle',
+        name: '\u0627\u0644\u0642\u0644\u0639\u0629 \u0627\u0644\u0645\u0638\u0644\u0645\u0629',
         music: 'castle',
         width: 26,
         height: 20,
@@ -214,18 +214,18 @@ const Maps = {
         ],
         npcs: [
             { id:'castle_guard', type:'guard', x:14, y:5, dir:'down', dialog:[
-                'The Dark Overlord waits in the throne room ahead.',
-                'Only the bravest warriors dare challenge him.',
-                'You will need mastery of all mathematics!'
+                '\u0633\u064A\u062F \u0627\u0644\u0638\u0644\u0627\u0645 \u064A\u0646\u062A\u0638\u0631 \u0641\u064A \u0642\u0627\u0639\u0629 \u0627\u0644\u0639\u0631\u0634.',
+                '\u0641\u0642\u0637 \u0623\u0634\u062C\u0639 \u0627\u0644\u0645\u062D\u0627\u0631\u0628\u064A\u0646 \u064A\u062C\u0631\u0624\u0648\u0646 \u0639\u0644\u0649 \u062A\u062D\u062F\u064A\u0647.',
+                '\u0633\u062A\u062D\u062A\u0627\u062C \u0625\u0644\u0649 \u0625\u062A\u0642\u0627\u0646 \u062C\u0645\u064A\u0639 \u0627\u0644\u0631\u064A\u0627\u0636\u064A\u0627\u062A!'
             ]},
         ],
         enemies: [
-            { id:'e10', type:'rockGolem', x:4, y:4, enemyData:{ name:'Rock Golem', hp:180, damage:26, defense:12 }, topics:['area_perimeter','pythagoras'], difficulty:'hard' },
-            { id:'e11', type:'eagle', x:20, y:3, enemyData:{ name:'Storm Eagle', hp:140, damage:30, defense:6 }, topics:['angles','triangles'], difficulty:'hard' },
-            { id:'e12', type:'demon', x:5, y:12, enemyData:{ name:'Chaos Demon', hp:200, damage:32, defense:10 }, topics:['statistics','probability'], difficulty:'hard' },
-            { id:'e13', type:'voidWalker', x:20, y:14, enemyData:{ name:'Void Walker', hp:220, damage:34, defense:11 }, topics:['powers','roots','ratios'], difficulty:'hard' },
-            { id:'e14', type:'dragon', x:10, y:9, enemyData:{ name:'Elder Dragon', hp:260, damage:36, defense:14 }, topics:['pythagoras','triangles','area_perimeter'], difficulty:'hard', isBoss:true },
-            { id:'e_final', type:'overlord', x:14, y:17, enemyData:{ name:'The Dark Overlord', hp:350, damage:40, defense:16 }, topics:['quadratics','pythagoras','statistics','bodmas','percentages'], difficulty:'hard', isBoss:true, isFinalBoss:true },
+            { id:'e10', type:'rockGolem', x:4, y:4, enemyData:{ name:'\u062C\u0648\u0644\u0645 \u0635\u062E\u0631\u064A', hp:180, damage:26, defense:12 }, topics:['area_perimeter','pythagoras'], difficulty:'hard' },
+            { id:'e11', type:'eagle', x:20, y:3, enemyData:{ name:'\u0646\u0633\u0631 \u0627\u0644\u0639\u0627\u0635\u0641\u0629', hp:140, damage:30, defense:6 }, topics:['angles','triangles'], difficulty:'hard' },
+            { id:'e12', type:'demon', x:5, y:12, enemyData:{ name:'\u0634\u064A\u0637\u0627\u0646 \u0627\u0644\u0641\u0648\u0636\u0649', hp:200, damage:32, defense:10 }, topics:['statistics','probability'], difficulty:'hard' },
+            { id:'e13', type:'voidWalker', x:20, y:14, enemyData:{ name:'\u0633\u0627\u0626\u0631 \u0627\u0644\u0641\u0631\u0627\u063A', hp:220, damage:34, defense:11 }, topics:['powers','roots','ratios'], difficulty:'hard' },
+            { id:'e14', type:'dragon', x:10, y:9, enemyData:{ name:'\u0627\u0644\u062A\u0646\u064A\u0646 \u0627\u0644\u0639\u0638\u064A\u0645', hp:260, damage:36, defense:14 }, topics:['pythagoras','triangles','area_perimeter'], difficulty:'hard', isBoss:true },
+            { id:'e_final', type:'overlord', x:14, y:17, enemyData:{ name:'\u0633\u064A\u062F \u0627\u0644\u0638\u0644\u0627\u0645', hp:350, damage:40, defense:16 }, topics:['quadratics','pythagoras','statistics','bodmas','percentages'], difficulty:'hard', isBoss:true, isFinalBoss:true },
         ],
         exits: [
             { x:14, y:0, toMap:'cave', toX:14, toY:18 }
