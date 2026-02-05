@@ -30,6 +30,10 @@ const Game = {
     _timer: null,
     _timerStart: 0,
 
+    // Particles
+    particles: [],
+    _particlesInited: false,
+
     // ---- Characters data ----
     characters: [
         { id:'knight', name:'\u0641\u0627\u0631\u0633 \u0627\u0644\u0645\u0639\u0627\u062F\u0644\u0627\u062A', desc:'\u0645\u0642\u0627\u062A\u0644 \u0645\u062A\u0648\u0627\u0632\u0646', hp:120, dmg:25, def:10, unlocked:true },
@@ -232,6 +236,7 @@ const Game = {
         this.player.y = this.state.playerY;
         this.player.dir = 'down';
         this.player.frame = 0;
+        this._particlesInited = false; // Reset particles
         // Copy enemies that haven't been defeated
         this.mapEnemies = (map.enemies || []).filter(e => !this.state.completedEnemies.includes(e.id)).map(e => ({...e}));
         // Show HUD and touch controls
@@ -344,6 +349,7 @@ const Game = {
         this.mapEnemies = (map.enemies || []).filter(e => !this.state.completedEnemies.includes(e.id)).map(e => ({...e}));
         document.getElementById('hud-location').textContent = map.name;
         Sound.playMusic(map.music);
+        this._particlesInited = false; // Reset particles for new map
         this.saveState();
     },
 
@@ -360,6 +366,84 @@ const Game = {
         this.saveState();
     },
 
+    // ---- Particle System ----
+    initParticles(map) {
+        this.particles = [];
+        const count = this.currentMap === 'forest' ? 25 : this.currentMap === 'cave' ? 15 : this.currentMap === 'castle' ? 10 : 18;
+        for (let i = 0; i < count; i++) {
+            this.particles.push(this._newParticle(map, true));
+        }
+        this._particlesInited = true;
+    },
+
+    _newParticle(map, randomY) {
+        const themes = {
+            village: { colors:['rgba(255,220,100,','rgba(200,255,200,'], size:[1.5,3], speed:[0.1,0.3], type:'float' },
+            forest: { colors:['rgba(100,255,150,','rgba(80,200,120,','rgba(200,255,100,'], size:[1.5,4], speed:[0.05,0.25], type:'firefly' },
+            cave: { colors:['rgba(100,180,255,','rgba(139,92,246,'], size:[1,2.5], speed:[0.15,0.4], type:'dust' },
+            castle: { colors:['rgba(255,80,80,','rgba(139,92,246,','rgba(255,100,50,'], size:[1,3], speed:[0.1,0.35], type:'ember' },
+        };
+        const t = themes[this.currentMap] || themes.village;
+        const mw = map.width * Sprites.T;
+        const mh = map.height * Sprites.T;
+        return {
+            x: Math.random() * mw,
+            y: randomY ? Math.random() * mh : -10,
+            vx: (Math.random() - 0.5) * t.speed[1],
+            vy: t.type === 'ember' ? -Math.random() * t.speed[1] : (Math.random() * t.speed[1] + t.speed[0]) * (t.type === 'dust' ? 1 : 0.5),
+            size: t.size[0] + Math.random() * (t.size[1] - t.size[0]),
+            color: t.colors[Math.floor(Math.random() * t.colors.length)],
+            alpha: 0.2 + Math.random() * 0.5,
+            phase: Math.random() * Math.PI * 2,
+            life: 200 + Math.random() * 400,
+            maxLife: 400,
+            type: t.type,
+            mw, mh,
+        };
+    },
+
+    updateParticles(map) {
+        const t = Date.now() / 1000;
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const p = this.particles[i];
+            p.life--;
+            if (p.type === 'firefly') {
+                p.x += Math.sin(t * 2 + p.phase) * 0.4 + p.vx;
+                p.y += Math.cos(t * 1.5 + p.phase) * 0.3 + p.vy * 0.2;
+            } else if (p.type === 'ember') {
+                p.x += Math.sin(t + p.phase) * 0.3 + p.vx;
+                p.y += p.vy;
+            } else {
+                p.x += p.vx + Math.sin(t + p.phase) * 0.2;
+                p.y += p.vy;
+            }
+            if (p.life <= 0 || p.y > p.mh + 10 || p.y < -20 || p.x < -20 || p.x > p.mw + 20) {
+                this.particles[i] = this._newParticle(map, false);
+                this.particles[i].x = Math.random() * p.mw;
+                this.particles[i].y = p.type === 'ember' ? p.mh + 5 : -5;
+            }
+        }
+    },
+
+    drawParticles(ctx) {
+        this.particles.forEach(p => {
+            const fadeIn = Math.min(1, (p.maxLife - p.life) / 60);
+            const fadeOut = Math.min(1, p.life / 60);
+            const a = p.alpha * fadeIn * fadeOut;
+            ctx.fillStyle = p.color + a.toFixed(2) + ')';
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+            // Glow
+            if (p.type === 'firefly' || p.type === 'ember') {
+                ctx.fillStyle = p.color + (a * 0.15).toFixed(2) + ')';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size * 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        });
+    },
+
     // ---- RENDER EXPLORE ----
     renderExplore() {
         const ctx = this.ctx;
@@ -368,18 +452,21 @@ const Game = {
         const T = Sprites.T;
         const map = Maps.get(this.currentMap);
 
+        // Init particles if needed
+        if (!this._particlesInited) this.initParticles(map);
+
         // Camera follows player (smooth)
         const targetCX = this.player.x * T - cw / 2 + T / 2;
         const targetCY = this.player.y * T - ch / 2 + T / 2;
-        this.camera.x += (targetCX - this.camera.x) * 0.15;
-        this.camera.y += (targetCY - this.camera.y) * 0.15;
+        this.camera.x += (targetCX - this.camera.x) * 0.12;
+        this.camera.y += (targetCY - this.camera.y) * 0.12;
 
         // Clamp camera
         this.camera.x = Math.max(0, Math.min(map.width * T - cw, this.camera.x));
         this.camera.y = Math.max(0, Math.min(map.height * T - ch, this.camera.y));
 
         ctx.clearRect(0, 0, cw, ch);
-        ctx.fillStyle = '#0a0e1a';
+        ctx.fillStyle = '#080b14';
         ctx.fillRect(0, 0, cw, ch);
 
         // Calculate visible tiles
@@ -401,46 +488,80 @@ const Game = {
 
         // Draw exits (glowing portals)
         (map.exits || []).forEach(e => {
-            const pulse = Math.sin(Date.now() / 400) * 0.3 + 0.7;
-            ctx.fillStyle = `rgba(139, 92, 246, ${pulse * 0.3})`;
+            const t = Date.now() / 400;
+            const pulse = Math.sin(t) * 0.3 + 0.7;
+            // Outer glow
+            const grd = ctx.createRadialGradient(e.x*T+T/2, e.y*T+T/2, 2, e.x*T+T/2, e.y*T+T/2, T);
+            grd.addColorStop(0, `rgba(139,92,246,${pulse * 0.5})`);
+            grd.addColorStop(1, 'rgba(139,92,246,0)');
+            ctx.fillStyle = grd;
+            ctx.fillRect(e.x*T-T/2, e.y*T-T/2, T*2, T*2);
+            // Core
+            ctx.fillStyle = `rgba(139,92,246,${pulse * 0.4})`;
             ctx.beginPath();
-            ctx.arc(e.x * T + T/2, e.y * T + T/2, T/2, 0, Math.PI * 2);
+            ctx.arc(e.x*T+T/2, e.y*T+T/2, T/2.5, 0, Math.PI*2);
             ctx.fill();
-            ctx.fillStyle = `rgba(139, 92, 246, ${pulse})`;
-            ctx.font = '16px sans-serif';
+            // Arrow
+            ctx.fillStyle = `rgba(200,180,255,${pulse})`;
+            ctx.font = 'bold 14px sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText(e.y === 0 ? '\u25B2' : '\u25BC', e.x * T + T/2, e.y * T + T/2 + 5);
+            ctx.fillText(e.y === 0 ? '\u25B2' : '\u25BC', e.x*T+T/2, e.y*T+T/2+5);
         });
 
-        // Draw NPCs
+        // Draw NPCs with subtle glow
         (map.npcs || []).forEach(npc => {
+            // NPC glow
+            const ga = 0.08 + Math.sin(Date.now()/600 + npc.x) * 0.04;
+            ctx.fillStyle = `rgba(6,182,212,${ga})`;
+            ctx.beginPath();
+            ctx.arc(npc.x*T+T/2, npc.y*T+T/2, T*0.8, 0, Math.PI*2);
+            ctx.fill();
             Sprites.drawNPC(ctx, npc.x * T, npc.y * T, npc.type, npc.dir, Math.floor(this.animFrame / 30));
         });
 
-        // Draw enemies
+        // Draw enemies with threat glow
         this.mapEnemies.forEach(e => {
+            const ga = 0.1 + Math.sin(Date.now()/400 + e.x*3) * 0.06;
+            ctx.fillStyle = `rgba(239,68,68,${ga})`;
+            ctx.beginPath();
+            ctx.arc(e.x*T+T/2, e.y*T+T/2, T*0.9, 0, Math.PI*2);
+            ctx.fill();
             Sprites.drawEnemy(ctx, e.x * T, e.y * T, e.type, this.animFrame);
         });
 
-        // Draw player
+        // Draw player with subtle aura
+        const pa = 0.06 + Math.sin(Date.now()/500) * 0.03;
+        ctx.fillStyle = `rgba(139,92,246,${pa})`;
+        ctx.beginPath();
+        ctx.arc(this.player.x*T+T/2, this.player.y*T+T/2, T*0.7, 0, Math.PI*2);
+        ctx.fill();
         Sprites.drawCharacter(ctx, this.player.x * T, this.player.y * T,
             this.state.characterId, this.player.dir, this.player.frame);
+
+        // Draw particles
+        this.updateParticles(map);
+        this.drawParticles(ctx);
 
         // Draw interaction hint
         this.drawInteractionHint(ctx, T, map);
 
         ctx.restore();
+
+        // Vignette overlay
+        this.drawVignette(ctx, cw, ch);
+    },
+
+    drawVignette(ctx, cw, ch) {
+        const g = ctx.createRadialGradient(cw/2, ch/2, cw*0.3, cw/2, ch/2, cw*0.8);
+        g.addColorStop(0, 'rgba(0,0,0,0)');
+        g.addColorStop(1, 'rgba(0,0,0,0.35)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, cw, ch);
     },
 
     drawInteractionHint(ctx, T, map) {
-        const dirs = [{dx:0,dy:-1},{dx:0,dy:1},{dx:-1,dy:0},{dx:1,dy:0}];
-        const fd = dirs.find(d => {
-            if (this.player.dir === 'up' && d.dy === -1) return true;
-            if (this.player.dir === 'down' && d.dy === 1) return true;
-            if (this.player.dir === 'left' && d.dx === -1) return true;
-            if (this.player.dir === 'right' && d.dx === 1) return true;
-            return false;
-        });
+        const dirs = {up:{dx:0,dy:-1},down:{dx:0,dy:1},left:{dx:-1,dy:0},right:{dx:1,dy:0}};
+        const fd = dirs[this.player.dir];
         if (!fd) return;
         const fx = this.player.x + fd.dx;
         const fy = this.player.y + fd.dy;
@@ -449,11 +570,20 @@ const Game = {
         const enemy = this.mapEnemies.find(e => e.x === fx && e.y === fy);
         if (npc || enemy) {
             const pulse = Math.sin(Date.now() / 300) * 3;
-            ctx.fillStyle = 'rgba(255,255,255,0.8)';
-            ctx.font = 'bold 12px sans-serif';
+            const bobY = fy * T - 8 + pulse;
+            // Indicator background pill
+            const label = npc ? '\u062A\u062D\u062F\u062B' : '\u0642\u0627\u062A\u0644';
+            ctx.font = 'bold 11px sans-serif';
+            const tw = ctx.measureText(label).width;
+            ctx.fillStyle = npc ? 'rgba(6,182,212,0.25)' : 'rgba(239,68,68,0.25)';
+            const rx = fx*T+T/2-tw/2-6;
+            ctx.beginPath();
+            ctx.roundRect(rx, bobY-10, tw+12, 18, 6);
+            ctx.fill();
+            // Text
+            ctx.fillStyle = npc ? 'rgba(6,182,212,0.9)' : 'rgba(239,68,68,0.9)';
             ctx.textAlign = 'center';
-            ctx.fillText(npc ? '\u062A\u062D\u062F\u062B' : '\u0642\u0627\u062A\u0644',
-                fx * T + T/2, fy * T - 4 + pulse);
+            ctx.fillText(label, fx*T+T/2, bobY+3);
         }
     },
 
@@ -495,6 +625,10 @@ const Game = {
 
         const npc = (map.npcs || []).find(n => n.x === tx && n.y === ty);
         if (npc) { this.startDialog(npc); return; }
+
+        // Check enemy facing (action button triggers battle too)
+        const enemy = this.mapEnemies.find(e => e.x === tx && e.y === ty);
+        if (enemy) { this.startBattle(enemy); return; }
 
         const tile = Maps.getTile(this.currentMap, tx, ty);
         if (tile === 17) {
@@ -757,8 +891,23 @@ const Game = {
         const el = document.getElementById('battle-msg');
         el.textContent = text;
         el.style.display = 'block';
-        el.style.color = color === 'green' ? '#10b981' : color === 'red' ? '#ef4444' : color === 'cyan' ? '#06b6d4' : '#e8ecf4';
+        const c = color === 'green' ? '#10b981' : color === 'red' ? '#ef4444' : color === 'cyan' ? '#06b6d4' : '#e8ecf4';
+        el.style.color = c;
         setTimeout(() => { el.style.display = 'none'; }, 1200);
+        // Floating damage number
+        this.showFloatingDmg(text, c);
+    },
+
+    showFloatingDmg(text, color) {
+        const el = document.createElement('div');
+        el.className = 'float-dmg';
+        el.textContent = text;
+        el.style.color = color;
+        el.style.fontSize = text.length > 12 ? '1rem' : '1.4rem';
+        el.style.left = (30 + Math.random() * 40) + '%';
+        el.style.top = '35%';
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 1200);
     },
 
     shakeScreen() {
@@ -904,29 +1053,72 @@ const Game = {
         c.height = window.innerHeight;
         const ctx = c.getContext('2d');
 
-        ctx.fillStyle = '#0a0e1a';
+        // Dark gradient background
+        const bg = ctx.createLinearGradient(0, 0, 0, c.height);
+        bg.addColorStop(0, '#0a0e1a');
+        bg.addColorStop(0.5, '#0d1225');
+        bg.addColorStop(1, '#080b14');
+        ctx.fillStyle = bg;
         ctx.fillRect(0, 0, c.width, c.height);
 
-        const g = ctx.createRadialGradient(c.width/2, c.height*0.3, 0, c.width/2, c.height*0.3, c.width*0.6);
-        g.addColorStop(0, 'rgba(139,92,246,0.08)');
-        g.addColorStop(1, 'transparent');
-        ctx.fillStyle = g;
+        // Purple/blue radial glow
+        const g1 = ctx.createRadialGradient(c.width*0.3, c.height*0.2, 0, c.width*0.3, c.height*0.2, c.width*0.5);
+        g1.addColorStop(0, 'rgba(139,92,246,0.06)');
+        g1.addColorStop(1, 'transparent');
+        ctx.fillStyle = g1;
         ctx.fillRect(0, 0, c.width, c.height);
 
-        ctx.fillStyle = 'rgba(139,92,246,0.12)';
-        ctx.font = '24px monospace';
-        const syms = ['+','-','\u00D7','\u00F7','=','\u03C0','\u221A','\u03A3','\u221E','\u0394','x','y','\u00B2'];
-        for (let i = 0; i < 30; i++) {
+        const g2 = ctx.createRadialGradient(c.width*0.7, c.height*0.6, 0, c.width*0.7, c.height*0.6, c.width*0.4);
+        g2.addColorStop(0, 'rgba(59,130,246,0.04)');
+        g2.addColorStop(1, 'transparent');
+        ctx.fillStyle = g2;
+        ctx.fillRect(0, 0, c.width, c.height);
+
+        // Floating math symbols with varied sizes and opacity
+        const syms = ['+','-','\u00D7','\u00F7','=','\u03C0','\u221A','\u03A3','\u221E','\u0394','x','y','\u00B2','%','{','}','f(x)'];
+        for (let i = 0; i < 40; i++) {
+            const sz = 12 + Math.random() * 24;
+            const alpha = 0.03 + Math.random() * 0.08;
+            ctx.font = `${sz}px monospace`;
+            ctx.fillStyle = i % 3 === 0 ? `rgba(139,92,246,${alpha})` :
+                            i % 3 === 1 ? `rgba(59,130,246,${alpha})` :
+                            `rgba(6,182,212,${alpha})`;
             ctx.fillText(syms[i % syms.length],
                 Math.random() * c.width, Math.random() * c.height);
         }
 
+        // Grid lines (subtle)
+        ctx.strokeStyle = 'rgba(59,130,246,0.03)';
+        ctx.lineWidth = 1;
+        for (let x = 0; x < c.width; x += 60) {
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, c.height); ctx.stroke();
+        }
+        for (let y = 0; y < c.height; y += 60) {
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(c.width, y); ctx.stroke();
+        }
+
+        // Characters with glow
         const cx = c.width / 2;
-        Sprites.drawCharacter(ctx, cx - 80, c.height * 0.65, 'knight', 'down', 0, 2);
-        Sprites.drawCharacter(ctx, cx - 20, c.height * 0.63, 'mage', 'down', 0, 2);
-        Sprites.drawCharacter(ctx, cx + 40, c.height * 0.65, 'ranger', 'down', 1, 2);
-        Sprites.drawEnemy(ctx, cx + 120, c.height * 0.64, 'dragon', 0);
-        Sprites.drawEnemy(ctx, cx - 140, c.height * 0.66, 'skeleton', 0);
+        const cy = c.height * 0.65;
+        // Character platform glow
+        const pg = ctx.createRadialGradient(cx, cy+20, 10, cx, cy+20, 120);
+        pg.addColorStop(0, 'rgba(139,92,246,0.08)');
+        pg.addColorStop(1, 'transparent');
+        ctx.fillStyle = pg;
+        ctx.fillRect(cx-150, cy-30, 300, 80);
+
+        Sprites.drawCharacter(ctx, cx - 80, cy, 'knight', 'down', 0, 2);
+        Sprites.drawCharacter(ctx, cx - 20, cy - 3, 'mage', 'down', 0, 2);
+        Sprites.drawCharacter(ctx, cx + 40, cy, 'ranger', 'down', 1, 2);
+        Sprites.drawEnemy(ctx, cx + 120, cy - 2, 'dragon', 0);
+        Sprites.drawEnemy(ctx, cx - 140, cy + 2, 'skeleton', 0);
+
+        // Bottom vignette
+        const vg = ctx.createLinearGradient(0, c.height*0.7, 0, c.height);
+        vg.addColorStop(0, 'transparent');
+        vg.addColorStop(1, 'rgba(8,11,20,0.8)');
+        ctx.fillStyle = vg;
+        ctx.fillRect(0, c.height*0.7, c.width, c.height*0.3);
     },
 
     // ---- Character Select ----

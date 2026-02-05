@@ -108,7 +108,7 @@
     <div id="dialog-box" class="dialog-box hidden">
         <div class="dialog-name" id="dialog-name">شخصية</div>
         <div class="dialog-text" id="dialog-text">مرحباً!</div>
-        <div class="dialog-prompt">اضغط المسافة للمتابعة</div>
+        <div class="dialog-prompt">اضغط المسافة أو زر التفاعل للمتابعة</div>
     </div>
 
     <!-- BATTLE OVERLAY -->
@@ -202,6 +202,21 @@
         <p id="level-up-text">مستوى 2</p>
     </div>
 
+    <script>
+    // roundRect polyfill
+    if (!CanvasRenderingContext2D.prototype.roundRect) {
+        CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r) {
+            r = Math.min(r||0, w/2, h/2);
+            this.moveTo(x+r,y);
+            this.arcTo(x+w,y,x+w,y+h,r);
+            this.arcTo(x+w,y+h,x,y+h,r);
+            this.arcTo(x,y+h,x,y,r);
+            this.arcTo(x,y,x+w,y,r);
+            this.closePath();
+            return this;
+        };
+    }
+    </script>
     <script src="js/sound.js"></script>
     <script src="js/sprites.js"></script>
     <script src="js/maps.js"></script>
