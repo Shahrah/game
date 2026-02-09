@@ -660,195 +660,542 @@ const Engine3D = {
         return mesh;
     },
     
-    createPlayer(region) {
+    // ---- HUMANOID CHARACTER BUILDER ----
+    buildHumanoid(opts) {
+        // opts: { scale, skinColor, bodyColor, pantsColor, bootsColor, hairColor, hairStyle,
+        //         armorColor, armorType, weaponType, weaponColor, helmetType, capeColor, glowColor, isBoss }
+        const s = opts.scale || 1;
         const group = new THREE.Group();
-        
-        // Body
-        const bodyGeo = new THREE.BoxGeometry(1.2, 2, 0.8);
-        const bodyColor = Game.state ? 
-            (World.characters.find(c => c.id === Game.state.characterId) || {}).color || '#ff6b35' :
-            '#ff6b35';
-        const bodyMat = new THREE.MeshLambertMaterial({ color: bodyColor });
-        const body = new THREE.Mesh(bodyGeo, bodyMat);
-        body.position.y = 1;
-        body.castShadow = true;
-        group.add(body);
-        
-        // Head
-        const headGeo = new THREE.SphereGeometry(0.5, 8, 8);
-        const headMat = new THREE.MeshLambertMaterial({ color: 0xffcc99 });
-        const head = new THREE.Mesh(headGeo, headMat);
-        head.position.y = 2.5;
-        head.castShadow = true;
-        group.add(head);
-        
-        // Legs
-        const legGeo = new THREE.BoxGeometry(0.4, 1.2, 0.4);
-        const legMat = new THREE.MeshLambertMaterial({ color: 0x333366 });
+
+        // -- Boots --
+        const bootMat = new THREE.MeshLambertMaterial({ color: opts.bootsColor || 0x3d2b1f });
+        const bootGeo = new THREE.BoxGeometry(0.45 * s, 0.5 * s, 0.6 * s);
+        const bootL = new THREE.Mesh(bootGeo, bootMat);
+        bootL.position.set(-0.28 * s, 0.25 * s, 0.05 * s);
+        bootL.castShadow = true;
+        group.add(bootL);
+        const bootR = bootL.clone();
+        bootR.position.x = 0.28 * s;
+        group.add(bootR);
+
+        // -- Legs --
+        const legMat = new THREE.MeshLambertMaterial({ color: opts.pantsColor || 0x333366 });
+        const legGeo = new THREE.BoxGeometry(0.4 * s, 1.1 * s, 0.4 * s);
         const legL = new THREE.Mesh(legGeo, legMat);
-        legL.position.set(-0.3, -0.1, 0);
+        legL.position.set(-0.28 * s, 1.05 * s, 0);
+        legL.castShadow = true;
+        legL.name = 'legL';
         group.add(legL);
         const legR = new THREE.Mesh(legGeo, legMat);
-        legR.position.set(0.3, -0.1, 0);
+        legR.position.set(0.28 * s, 1.05 * s, 0);
+        legR.name = 'legR';
         group.add(legR);
-        
-        // Arms
-        const armGeo = new THREE.BoxGeometry(0.3, 1.4, 0.3);
-        const armMat = new THREE.MeshLambertMaterial({ color: bodyColor });
+
+        // -- Torso (body armor) --
+        const torsoColor = opts.armorColor || opts.bodyColor || 0x556677;
+        const torsoMat = new THREE.MeshPhongMaterial({ color: torsoColor, shininess: 40 });
+        const torsoGeo = new THREE.BoxGeometry(1.1 * s, 1.4 * s, 0.65 * s);
+        const torso = new THREE.Mesh(torsoGeo, torsoMat);
+        torso.position.y = 2.3 * s;
+        torso.castShadow = true;
+        group.add(torso);
+
+        // -- Belt --
+        const beltMat = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+        const beltGeo = new THREE.BoxGeometry(1.15 * s, 0.15 * s, 0.7 * s);
+        const belt = new THREE.Mesh(beltGeo, beltMat);
+        belt.position.y = 1.65 * s;
+        group.add(belt);
+
+        // -- Shoulder pads (armor) --
+        if (opts.armorType === 'heavy' || opts.armorType === 'medium') {
+            const padMat = new THREE.MeshPhongMaterial({ color: opts.armorColor || 0x666688, shininess: 60 });
+            const padGeo = new THREE.SphereGeometry(0.35 * s, 8, 6);
+            const padL = new THREE.Mesh(padGeo, padMat);
+            padL.position.set(-0.75 * s, 2.8 * s, 0);
+            padL.scale.set(1, 0.7, 1);
+            group.add(padL);
+            const padR = padL.clone();
+            padR.position.x = 0.75 * s;
+            group.add(padR);
+            if (opts.armorType === 'heavy') {
+                // Extra spikes on shoulders for bosses
+                const spikeMat = new THREE.MeshPhongMaterial({ color: 0xcccccc, shininess: 80 });
+                const spikeGeo = new THREE.ConeGeometry(0.1 * s, 0.5 * s, 5);
+                [-1, 1].forEach(side => {
+                    const spike = new THREE.Mesh(spikeGeo, spikeMat);
+                    spike.position.set(side * 0.75 * s, 3.15 * s, 0);
+                    group.add(spike);
+                });
+            }
+        }
+
+        // -- Arms --
+        const armMat = new THREE.MeshLambertMaterial({ color: opts.armorColor || opts.bodyColor || 0x556677 });
+        const armGeo = new THREE.BoxGeometry(0.35 * s, 1.3 * s, 0.35 * s);
         const armL = new THREE.Mesh(armGeo, armMat);
-        armL.position.set(-0.9, 0.8, 0);
+        armL.position.set(-0.75 * s, 2.0 * s, 0);
+        armL.castShadow = true;
+        armL.name = 'armL';
         group.add(armL);
         const armR = new THREE.Mesh(armGeo, armMat);
-        armR.position.set(0.9, 0.8, 0);
+        armR.position.set(0.75 * s, 2.0 * s, 0);
+        armR.name = 'armR';
         group.add(armR);
-        
-        // Weapon indicator
-        const weapGeo = new THREE.BoxGeometry(0.2, 1.5, 0.2);
-        const weapMat = new THREE.MeshPhongMaterial({ 
-            color: 0x4ecdc4, 
-            emissive: 0x224444, 
-            emissiveIntensity: 0.5 
+
+        // -- Hands --
+        const handMat = new THREE.MeshLambertMaterial({ color: opts.skinColor || 0xffcc99 });
+        const handGeo = new THREE.SphereGeometry(0.16 * s, 6, 6);
+        const handL = new THREE.Mesh(handGeo, handMat);
+        handL.position.set(-0.75 * s, 1.25 * s, 0);
+        group.add(handL);
+        const handR = new THREE.Mesh(handGeo, handMat);
+        handR.position.set(0.75 * s, 1.25 * s, 0);
+        group.add(handR);
+
+        // -- Neck --
+        const neckGeo = new THREE.CylinderGeometry(0.18 * s, 0.22 * s, 0.3 * s, 8);
+        const neckMat = new THREE.MeshLambertMaterial({ color: opts.skinColor || 0xffcc99 });
+        const neck = new THREE.Mesh(neckGeo, neckMat);
+        neck.position.y = 3.15 * s;
+        group.add(neck);
+
+        // -- Head --
+        const headMat = new THREE.MeshLambertMaterial({ color: opts.skinColor || 0xffcc99 });
+        const headGeo = new THREE.SphereGeometry(0.48 * s, 10, 10);
+        const head = new THREE.Mesh(headGeo, headMat);
+        head.position.y = 3.65 * s;
+        head.castShadow = true;
+        group.add(head);
+
+        // -- Eyes --
+        const eyeWhiteGeo = new THREE.SphereGeometry(0.08 * s, 6, 6);
+        const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const eyePupilGeo = new THREE.SphereGeometry(0.045 * s, 6, 6);
+        const eyePupilMat = new THREE.MeshBasicMaterial({ color: opts.glowColor || 0x222222 });
+        [-0.15, 0.15].forEach(xOff => {
+            const white = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
+            white.position.set(xOff * s, 3.72 * s, 0.4 * s);
+            group.add(white);
+            const pupil = new THREE.Mesh(eyePupilGeo, eyePupilMat);
+            pupil.position.set(xOff * s, 3.72 * s, 0.46 * s);
+            group.add(pupil);
         });
-        const weapon = new THREE.Mesh(weapGeo, weapMat);
-        weapon.position.set(1.1, 1.2, 0);
-        weapon.rotation.z = -0.3;
-        weapon.name = 'weapon';
-        group.add(weapon);
-        
+
+        // -- Mouth --
+        const mouthGeo = new THREE.BoxGeometry(0.2 * s, 0.04 * s, 0.05 * s);
+        const mouthMat = new THREE.MeshLambertMaterial({ color: 0x993333 });
+        const mouth = new THREE.Mesh(mouthGeo, mouthMat);
+        mouth.position.set(0, 3.5 * s, 0.42 * s);
+        group.add(mouth);
+
+        // -- Hair --
+        if (opts.hairStyle !== 'bald') {
+            const hairMat = new THREE.MeshLambertMaterial({ color: opts.hairColor || 0x222222 });
+            if (opts.hairStyle === 'short' || !opts.hairStyle) {
+                const hairGeo = new THREE.SphereGeometry(0.5 * s, 10, 10, 0, Math.PI * 2, 0, Math.PI * 0.55);
+                const hair = new THREE.Mesh(hairGeo, hairMat);
+                hair.position.y = 3.72 * s;
+                group.add(hair);
+            } else if (opts.hairStyle === 'long') {
+                const hairGeo = new THREE.BoxGeometry(0.9 * s, 0.8 * s, 0.6 * s);
+                const hair = new THREE.Mesh(hairGeo, hairMat);
+                hair.position.set(0, 3.6 * s, -0.15 * s);
+                group.add(hair);
+                const hairBackGeo = new THREE.BoxGeometry(0.5 * s, 0.6 * s, 0.3 * s);
+                const hairBack = new THREE.Mesh(hairBackGeo, hairMat);
+                hairBack.position.set(0, 3.0 * s, -0.35 * s);
+                group.add(hairBack);
+            } else if (opts.hairStyle === 'mohawk') {
+                const hairGeo = new THREE.BoxGeometry(0.15 * s, 0.6 * s, 0.7 * s);
+                const hair = new THREE.Mesh(hairGeo, hairMat);
+                hair.position.set(0, 4.1 * s, -0.05 * s);
+                group.add(hair);
+            }
+        }
+
+        // -- Helmet --
+        if (opts.helmetType) {
+            const helmetMat = new THREE.MeshPhongMaterial({ color: opts.armorColor || 0x888888, shininess: 60 });
+            if (opts.helmetType === 'knight') {
+                const helmetGeo = new THREE.SphereGeometry(0.55 * s, 10, 10, 0, Math.PI * 2, 0, Math.PI * 0.6);
+                const helmet = new THREE.Mesh(helmetGeo, helmetMat);
+                helmet.position.y = 3.75 * s;
+                group.add(helmet);
+                // Visor
+                const visorGeo = new THREE.BoxGeometry(0.6 * s, 0.15 * s, 0.15 * s);
+                const visorMat = new THREE.MeshLambertMaterial({ color: 0x333333 });
+                const visor = new THREE.Mesh(visorGeo, visorMat);
+                visor.position.set(0, 3.68 * s, 0.45 * s);
+                group.add(visor);
+            } else if (opts.helmetType === 'crown') {
+                const crownGeo = new THREE.CylinderGeometry(0.45 * s, 0.5 * s, 0.4 * s, 8);
+                const crownMat2 = new THREE.MeshPhongMaterial({ color: 0xFFD700, emissive: 0x886600, shininess: 80 });
+                const crown = new THREE.Mesh(crownGeo, crownMat2);
+                crown.position.y = 4.15 * s;
+                group.add(crown);
+                // Crown points
+                for (let i = 0; i < 5; i++) {
+                    const pointGeo = new THREE.ConeGeometry(0.08 * s, 0.3 * s, 4);
+                    const point = new THREE.Mesh(pointGeo, crownMat2);
+                    const angle = (i / 5) * Math.PI * 2;
+                    point.position.set(Math.sin(angle) * 0.38 * s, 4.45 * s, Math.cos(angle) * 0.38 * s);
+                    group.add(point);
+                }
+            } else if (opts.helmetType === 'hood') {
+                const hoodGeo = new THREE.SphereGeometry(0.56 * s, 8, 8, 0, Math.PI * 2, 0, Math.PI * 0.6);
+                const hoodMat2 = new THREE.MeshLambertMaterial({ color: opts.armorColor || 0x333355 });
+                const hood = new THREE.Mesh(hoodGeo, hoodMat2);
+                hood.position.y = 3.72 * s;
+                group.add(hood);
+            } else if (opts.helmetType === 'horned') {
+                const helmetGeo = new THREE.SphereGeometry(0.55 * s, 10, 10, 0, Math.PI * 2, 0, Math.PI * 0.6);
+                const helmet = new THREE.Mesh(helmetGeo, helmetMat);
+                helmet.position.y = 3.75 * s;
+                group.add(helmet);
+                [-1, 1].forEach(side => {
+                    const hornGeo = new THREE.ConeGeometry(0.08 * s, 0.7 * s, 6);
+                    const hornMat = new THREE.MeshPhongMaterial({ color: 0xddddcc });
+                    const horn = new THREE.Mesh(hornGeo, hornMat);
+                    horn.position.set(side * 0.4 * s, 4.1 * s, 0);
+                    horn.rotation.z = side * -0.4;
+                    group.add(horn);
+                });
+            }
+        }
+
+        // -- Cape --
+        if (opts.capeColor) {
+            const capeMat = new THREE.MeshLambertMaterial({ color: opts.capeColor, side: THREE.DoubleSide });
+            const capeGeo = new THREE.PlaneGeometry(0.9 * s, 1.8 * s);
+            const cape = new THREE.Mesh(capeGeo, capeMat);
+            cape.position.set(0, 2.0 * s, -0.4 * s);
+            cape.rotation.x = 0.1;
+            cape.name = 'cape';
+            group.add(cape);
+        }
+
+        // -- Weapon in hand --
+        if (opts.weaponType) {
+            const wColor = opts.weaponColor || 0xaaaaaa;
+            if (opts.weaponType === 'sword') {
+                const bladeGeo = new THREE.BoxGeometry(0.1 * s, 1.8 * s, 0.05 * s);
+                const bladeMat = new THREE.MeshPhongMaterial({ color: wColor, shininess: 80 });
+                const blade = new THREE.Mesh(bladeGeo, bladeMat);
+                blade.position.set(0.85 * s, 1.9 * s, 0.3 * s);
+                blade.rotation.z = -0.25;
+                blade.rotation.x = -0.3;
+                blade.name = 'weapon';
+                group.add(blade);
+                // Guard
+                const guardGeo = new THREE.BoxGeometry(0.35 * s, 0.08 * s, 0.08 * s);
+                const guardMat = new THREE.MeshPhongMaterial({ color: 0xDAA520 });
+                const guard = new THREE.Mesh(guardGeo, guardMat);
+                guard.position.set(0.85 * s, 1.1 * s, 0.3 * s);
+                group.add(guard);
+            } else if (opts.weaponType === 'staff') {
+                const staffGeo = new THREE.CylinderGeometry(0.06 * s, 0.06 * s, 2.5 * s, 6);
+                const staffMat = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+                const staff = new THREE.Mesh(staffGeo, staffMat);
+                staff.position.set(0.85 * s, 2.0 * s, 0);
+                staff.name = 'weapon';
+                group.add(staff);
+                // Crystal on top
+                const crystalGeo = new THREE.OctahedronGeometry(0.2 * s, 0);
+                const crystalMat = new THREE.MeshPhongMaterial({ color: wColor, emissive: wColor, emissiveIntensity: 0.5, transparent: true, opacity: 0.8 });
+                const crystal = new THREE.Mesh(crystalGeo, crystalMat);
+                crystal.position.set(0.85 * s, 3.35 * s, 0);
+                group.add(crystal);
+                const glow = new THREE.PointLight(typeof wColor === 'number' ? wColor : 0x4ecdc4, 0.5, 8);
+                glow.position.set(0.85 * s, 3.35 * s, 0);
+                group.add(glow);
+            } else if (opts.weaponType === 'axe') {
+                const handleGeo = new THREE.CylinderGeometry(0.05 * s, 0.05 * s, 1.8 * s, 6);
+                const handleMat = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+                const handle = new THREE.Mesh(handleGeo, handleMat);
+                handle.position.set(0.85 * s, 1.8 * s, 0.2 * s);
+                handle.rotation.z = -0.2;
+                handle.name = 'weapon';
+                group.add(handle);
+                const headGeo2 = new THREE.BoxGeometry(0.5 * s, 0.6 * s, 0.1 * s);
+                const headMat2 = new THREE.MeshPhongMaterial({ color: wColor, shininess: 60 });
+                const axeHead = new THREE.Mesh(headGeo2, headMat2);
+                axeHead.position.set(1.05 * s, 2.6 * s, 0.2 * s);
+                group.add(axeHead);
+            } else if (opts.weaponType === 'shield_sword') {
+                // Sword in right hand
+                const bladeGeo = new THREE.BoxGeometry(0.1 * s, 1.5 * s, 0.05 * s);
+                const bladeMat = new THREE.MeshPhongMaterial({ color: wColor, shininess: 80 });
+                const blade = new THREE.Mesh(bladeGeo, bladeMat);
+                blade.position.set(0.85 * s, 1.8 * s, 0.3 * s);
+                blade.rotation.z = -0.2;
+                blade.name = 'weapon';
+                group.add(blade);
+                // Shield in left hand
+                const shieldGeo = new THREE.BoxGeometry(0.1 * s, 1.0 * s, 0.8 * s);
+                const shieldMat = new THREE.MeshPhongMaterial({ color: opts.armorColor || 0x4466aa, shininess: 50 });
+                const shield = new THREE.Mesh(shieldGeo, shieldMat);
+                shield.position.set(-0.9 * s, 1.8 * s, 0.2 * s);
+                group.add(shield);
+                // Shield emblem
+                const emblemGeo = new THREE.SphereGeometry(0.15 * s, 6, 6);
+                const emblemMat = new THREE.MeshPhongMaterial({ color: 0xFFD700 });
+                const emblem = new THREE.Mesh(emblemGeo, emblemMat);
+                emblem.position.set(-0.95 * s, 1.8 * s, 0.2 * s);
+                emblem.scale.set(0.3, 1, 1);
+                group.add(emblem);
+            } else if (opts.weaponType === 'dual_daggers') {
+                const dagMat = new THREE.MeshPhongMaterial({ color: wColor, shininess: 90 });
+                [-1, 1].forEach(side => {
+                    const dagGeo = new THREE.BoxGeometry(0.06 * s, 0.8 * s, 0.04 * s);
+                    const dag = new THREE.Mesh(dagGeo, dagMat);
+                    dag.position.set(side * 0.8 * s, 1.2 * s, 0.25 * s);
+                    dag.rotation.z = side * 0.15;
+                    if (side === 1) dag.name = 'weapon';
+                    group.add(dag);
+                });
+            } else if (opts.weaponType === 'hammer') {
+                const handleGeo = new THREE.CylinderGeometry(0.06 * s, 0.06 * s, 2.0 * s, 6);
+                const handleMat = new THREE.MeshLambertMaterial({ color: 0x666666 });
+                const handle = new THREE.Mesh(handleGeo, handleMat);
+                handle.position.set(0.85 * s, 1.8 * s, 0.15 * s);
+                handle.rotation.z = -0.2;
+                handle.name = 'weapon';
+                group.add(handle);
+                const hamGeo = new THREE.BoxGeometry(0.7 * s, 0.45 * s, 0.45 * s);
+                const hamMat = new THREE.MeshPhongMaterial({ color: wColor, shininess: 60 });
+                const hamHead = new THREE.Mesh(hamGeo, hamMat);
+                hamHead.position.set(0.85 * s, 2.85 * s, 0.15 * s);
+                group.add(hamHead);
+            }
+        }
+
+        // -- Boss glow aura --
+        if (opts.glowColor && opts.isBoss) {
+            const auraMat = new THREE.MeshBasicMaterial({ color: opts.glowColor, transparent: true, opacity: 0.15, side: THREE.DoubleSide });
+            const auraGeo = new THREE.SphereGeometry(2.2 * s, 16, 16);
+            const aura = new THREE.Mesh(auraGeo, auraMat);
+            aura.position.y = 2.0 * s;
+            aura.name = 'aura';
+            group.add(aura);
+            const auraLight = new THREE.PointLight(opts.glowColor, 0.6, 15);
+            auraLight.position.y = 2.5 * s;
+            group.add(auraLight);
+        }
+
+        return group;
+    },
+
+    createPlayer(region) {
+        const charData = Game.state ? World.characters.find(c => c.id === Game.state.characterId) : null;
+        const bodyColor = charData ? charData.color : '#ff6b35';
+        const charId = charData ? charData.id : 'warrior';
+
+        const weaponTypes = { warrior: 'shield_sword', mage: 'staff', tank: 'hammer', ranger: 'dual_daggers' };
+        const helmetTypes = { warrior: 'knight', mage: 'hood', tank: 'knight', ranger: null };
+        const armorTypes = { warrior: 'medium', mage: null, tank: 'heavy', ranger: null };
+        const hairStyles = { warrior: 'short', mage: 'long', tank: 'bald', ranger: 'mohawk' };
+        const weaponColors = [0x4ecdc4, 0xff6b6b, 0xa78bfa];
+        const currentWeapon = Game.state ? Game.state.currentWeapon : 0;
+
+        const group = this.buildHumanoid({
+            scale: 1,
+            skinColor: 0xffcc99,
+            bodyColor: bodyColor,
+            armorColor: bodyColor,
+            pantsColor: 0x333355,
+            bootsColor: 0x3d2b1f,
+            hairColor: 0x222222,
+            hairStyle: hairStyles[charId] || 'short',
+            armorType: armorTypes[charId] || 'medium',
+            helmetType: helmetTypes[charId],
+            weaponType: weaponTypes[charId] || 'sword',
+            weaponColor: weaponColors[currentWeapon],
+            capeColor: bodyColor,
+        });
+
         this.playerMesh = group;
         this.playerPos = { x: 0, y: 0, z: 0 };
         group.position.set(0, 0, 0);
         this.scene.add(group);
     },
     
+    // Enemy warrior appearance database
+    _enemyAppearances: {
+        // Village enemies - light warriors
+        slime1: { armorColor: 0x664466, pantsColor: 0x333344, weaponType: 'sword', weaponColor: 0x888888, hairStyle: 'short', hairColor: 0x444444, armorType: 'medium', helmetType: null, skinColor: 0xccaa88 },
+        slime2: { armorColor: 0x445566, pantsColor: 0x222244, weaponType: 'dual_daggers', weaponColor: 0x999999, hairStyle: 'mohawk', hairColor: 0xcc3333, armorType: null, helmetType: null, skinColor: 0xddbb99 },
+        slime3: { armorColor: 0x554455, pantsColor: 0x332233, weaponType: 'axe', weaponColor: 0x777777, hairStyle: 'short', hairColor: 0x333333, armorType: 'medium', helmetType: 'knight', skinColor: 0xccaa88 },
+        boss_village: { armorColor: 0x880000, pantsColor: 0x440000, weaponType: 'shield_sword', weaponColor: 0xff4444, hairStyle: 'bald', armorType: 'heavy', helmetType: 'horned', capeColor: 0x880000, skinColor: 0xbb8866, glowColor: 0xff0000 },
+        // Forest enemies - nature warriors
+        wolf1: { armorColor: 0x2d5a27, pantsColor: 0x1a3a17, weaponType: 'dual_daggers', weaponColor: 0x66aa66, hairStyle: 'long', hairColor: 0x1a3a17, armorType: null, helmetType: 'hood', skinColor: 0xccbb99 },
+        wolf2: { armorColor: 0x336633, pantsColor: 0x224422, weaponType: 'staff', weaponColor: 0x44cc44, hairStyle: 'long', hairColor: 0x222222, armorType: null, helmetType: 'hood', skinColor: 0xddbb88 },
+        wolf3: { armorColor: 0x445533, pantsColor: 0x223311, weaponType: 'axe', weaponColor: 0x88aa44, hairStyle: 'mohawk', hairColor: 0x558833, armorType: 'medium', helmetType: null, skinColor: 0xccaa77 },
+        wolf4: { armorColor: 0x333322, pantsColor: 0x222211, weaponType: 'sword', weaponColor: 0x99bb55, hairStyle: 'short', hairColor: 0x111111, armorType: 'medium', helmetType: 'knight', skinColor: 0xddcc99 },
+        boss_forest: { armorColor: 0x1a5c1a, pantsColor: 0x0d3a0d, weaponType: 'hammer', weaponColor: 0x44ff44, hairStyle: 'bald', armorType: 'heavy', helmetType: 'horned', capeColor: 0x225522, skinColor: 0xaa8866, glowColor: 0x44ff44 },
+        // Physics city enemies - tech warriors
+        robot1: { armorColor: 0x4466aa, pantsColor: 0x223355, weaponType: 'shield_sword', weaponColor: 0x66aaff, hairStyle: 'bald', armorType: 'heavy', helmetType: 'knight', skinColor: 0xccccdd },
+        robot2: { armorColor: 0x5577bb, pantsColor: 0x334466, weaponType: 'hammer', weaponColor: 0xffcc00, hairStyle: 'mohawk', hairColor: 0xffcc00, armorType: 'heavy', helmetType: null, skinColor: 0xddddee },
+        robot3: { armorColor: 0x3355aa, pantsColor: 0x223366, weaponType: 'staff', weaponColor: 0xff6666, hairStyle: 'short', hairColor: 0x3355aa, armorType: 'medium', helmetType: 'hood', skinColor: 0xccbbcc },
+        robot4: { armorColor: 0x6688cc, pantsColor: 0x445577, weaponType: 'dual_daggers', weaponColor: 0x88ccff, hairStyle: 'long', hairColor: 0x222244, armorType: 'medium', helmetType: null, skinColor: 0xddccdd },
+        boss_physics: { armorColor: 0x2244aa, pantsColor: 0x112266, weaponType: 'hammer', weaponColor: 0xffdd00, hairStyle: 'bald', armorType: 'heavy', helmetType: 'horned', capeColor: 0x2244aa, skinColor: 0xbbbbcc, glowColor: 0x4488ff },
+        // Cave enemies - dark warriors
+        golem1: { armorColor: 0x5a4a6a, pantsColor: 0x3a2a4a, weaponType: 'hammer', weaponColor: 0xaa66cc, hairStyle: 'bald', armorType: 'heavy', helmetType: 'knight', skinColor: 0xaa9988 },
+        golem2: { armorColor: 0x664488, pantsColor: 0x442266, weaponType: 'staff', weaponColor: 0xcc44ff, hairStyle: 'long', hairColor: 0x442266, armorType: null, helmetType: 'hood', skinColor: 0xbbaa99 },
+        golem3: { armorColor: 0x553366, pantsColor: 0x332244, weaponType: 'axe', weaponColor: 0xbb55dd, hairStyle: 'mohawk', hairColor: 0x8844aa, armorType: 'medium', helmetType: null, skinColor: 0xccbb99 },
+        golem4: { armorColor: 0x772255, pantsColor: 0x551133, weaponType: 'shield_sword', weaponColor: 0xff44aa, hairStyle: 'short', hairColor: 0x330022, armorType: 'heavy', helmetType: 'knight', skinColor: 0xbb9988 },
+        boss_cave: { armorColor: 0x6a0dad, pantsColor: 0x440088, weaponType: 'staff', weaponColor: 0xff00ff, hairStyle: 'bald', armorType: 'heavy', helmetType: 'crown', capeColor: 0x6a0dad, skinColor: 0xaa8877, glowColor: 0xcc44ff },
+        // Castle enemies - elite warriors
+        knight1: { armorColor: 0x888888, pantsColor: 0x555555, weaponType: 'shield_sword', weaponColor: 0xdddddd, hairStyle: 'short', hairColor: 0x222222, armorType: 'heavy', helmetType: 'knight', capeColor: 0x880000, skinColor: 0xddcc99 },
+        knight2: { armorColor: 0x777777, pantsColor: 0x444444, weaponType: 'hammer', weaponColor: 0xcccccc, hairStyle: 'bald', armorType: 'heavy', helmetType: 'knight', capeColor: 0x000088, skinColor: 0xccbb88 },
+        knight3: { armorColor: 0x553366, pantsColor: 0x332244, weaponType: 'staff', weaponColor: 0xff66ff, hairStyle: 'long', hairColor: 0x332244, armorType: 'medium', helmetType: 'hood', capeColor: 0x553366, skinColor: 0xddccaa },
+        knight4: { armorColor: 0x440000, pantsColor: 0x220000, weaponType: 'dual_daggers', weaponColor: 0xff2222, hairStyle: 'mohawk', hairColor: 0xff0000, armorType: 'heavy', helmetType: 'horned', capeColor: 0x440000, skinColor: 0xbbaa88 },
+        boss_castle: { armorColor: 0x111111, pantsColor: 0x000000, weaponType: 'staff', weaponColor: 0xff0000, hairStyle: 'bald', armorType: 'heavy', helmetType: 'crown', capeColor: 0x220000, skinColor: 0x998877, glowColor: 0xff0000 },
+    },
+
     createEnemyMeshes(region) {
         this.enemyMeshes = [];
         const completedEnemies = (Game.state && Game.state.completedEnemies) || [];
-        
+
         region.enemies.forEach(enemy => {
             if (completedEnemies.includes(enemy.id)) return;
-            
+
+            const scale = enemy.isBoss ? 1.6 : 1.0;
+            const appearance = this._enemyAppearances[enemy.id] || {};
+
+            // Build humanoid warrior
+            const humanoid = this.buildHumanoid({
+                scale: scale,
+                skinColor: appearance.skinColor || 0xccaa88,
+                bodyColor: appearance.armorColor || 0x884444,
+                armorColor: appearance.armorColor || 0x884444,
+                pantsColor: appearance.pantsColor || 0x333333,
+                bootsColor: 0x3d2b1f,
+                hairColor: appearance.hairColor || 0x222222,
+                hairStyle: appearance.hairStyle || 'short',
+                armorType: appearance.armorType || (enemy.isBoss ? 'heavy' : 'medium'),
+                helmetType: appearance.helmetType || (enemy.isBoss ? 'horned' : null),
+                weaponType: appearance.weaponType || 'sword',
+                weaponColor: appearance.weaponColor || 0xaa4444,
+                capeColor: appearance.capeColor || (enemy.isBoss ? 0x880000 : null),
+                glowColor: appearance.glowColor || (enemy.isBoss ? 0xff0000 : null),
+                isBoss: enemy.isBoss,
+            });
+
             const group = new THREE.Group();
-            
-            // Body
-            const size = enemy.isBoss ? 3 : 1.5;
-            const bodyGeo = new THREE.BoxGeometry(size, size * 1.5, size * 0.8);
-            const bodyColor = enemy.isBoss ? 0xff0000 : 0x884488;
-            const bodyMat = new THREE.MeshLambertMaterial({ color: bodyColor });
-            const body = new THREE.Mesh(bodyGeo, bodyMat);
-            body.position.y = size * 0.75;
-            body.castShadow = true;
-            group.add(body);
-            
-            // Eyes
-            const eyeGeo = new THREE.SphereGeometry(size * 0.15, 8, 8);
-            const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-            const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
-            eyeL.position.set(-size * 0.2, size * 1.0, size * 0.35);
-            group.add(eyeL);
-            const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
-            eyeR.position.set(size * 0.2, size * 1.0, size * 0.35);
-            group.add(eyeR);
-            
-            // Boss crown
-            if (enemy.isBoss) {
-                const crownGeo = new THREE.ConeGeometry(1, 2, 5);
-                const crownMat = new THREE.MeshPhongMaterial({ color: 0xFFD700, emissive: 0x886600 });
-                const crown = new THREE.Mesh(crownGeo, crownMat);
-                crown.position.y = size * 1.8;
-                group.add(crown);
-            }
-            
-            // Health bar
-            const hpBarGeo = new THREE.PlaneGeometry(size * 1.5, 0.3);
-            const hpBarMat = new THREE.MeshBasicMaterial({ color: 0xff0000, side: THREE.DoubleSide });
+            group.add(humanoid);
+
+            // Health bar above head
+            const barHeight = 4.5 * scale;
+            const hpBarBgGeo = new THREE.PlaneGeometry(2.0 * scale, 0.25);
+            const hpBarBgMat = new THREE.MeshBasicMaterial({ color: 0x333333, side: THREE.DoubleSide });
+            const hpBarBg = new THREE.Mesh(hpBarBgGeo, hpBarBgMat);
+            hpBarBg.position.y = barHeight;
+            group.add(hpBarBg);
+            const hpBarGeo = new THREE.PlaneGeometry(1.9 * scale, 0.18);
+            const hpBarMat = new THREE.MeshBasicMaterial({ color: enemy.isBoss ? 0xff4444 : 0xff0000, side: THREE.DoubleSide });
             const hpBar = new THREE.Mesh(hpBarGeo, hpBarMat);
-            hpBar.position.y = size * 2.2;
+            hpBar.position.y = barHeight;
+            hpBar.position.z = 0.01;
             hpBar.name = 'hpBar';
             group.add(hpBar);
-            
-            // Name label using sprite
+
+            // Name label sprite
             const canvas2 = document.createElement('canvas');
             canvas2.width = 256;
             canvas2.height = 64;
             const ctx2 = canvas2.getContext('2d');
             ctx2.fillStyle = 'rgba(0,0,0,0.7)';
-            ctx2.fillRect(0, 0, 256, 64);
+            ctx2.roundRect(10, 2, 236, 60, 8);
+            ctx2.fill();
             ctx2.fillStyle = enemy.isBoss ? '#ffd700' : '#ffffff';
-            ctx2.font = 'bold 24px Arial';
+            ctx2.font = 'bold 22px Arial';
             ctx2.textAlign = 'center';
             ctx2.fillText(enemy.name, 128, 28);
             ctx2.fillStyle = '#ff6b6b';
-            ctx2.font = '18px Arial';
-            ctx2.fillText(`م.${enemy.level}`, 128, 52);
-            
+            ctx2.font = '16px Arial';
+            ctx2.fillText('م.' + enemy.level + (enemy.isBoss ? ' ⚔️ زعيم' : ''), 128, 50);
             const texture = new THREE.CanvasTexture(canvas2);
             const spriteMat = new THREE.SpriteMaterial({ map: texture });
             const sprite = new THREE.Sprite(spriteMat);
             sprite.scale.set(4, 1, 1);
-            sprite.position.y = size * 2.7;
+            sprite.position.y = barHeight + 0.7;
             group.add(sprite);
-            
+
             group.position.set(enemy.x, 0, enemy.z);
             group.userData = { enemy, originalY: 0 };
-            
             this.scene.add(group);
             this.enemyMeshes.push(group);
         });
     },
     
+    // NPC appearance database
+    _npcAppearances: {
+        elder: { armorColor: 0x6666bb, pantsColor: 0x333366, weaponType: 'staff', weaponColor: 0x8888ff, hairStyle: 'bald', skinColor: 0xddbb99, armorType: null, helmetType: null, capeColor: 0x4444aa },
+        shopkeeper: { armorColor: 0xDAA520, pantsColor: 0x8B6914, weaponType: null, hairStyle: 'short', hairColor: 0x333333, skinColor: 0xddcc99, armorType: null, helmetType: null },
+        trainer: { armorColor: 0xff69b4, pantsColor: 0xaa4477, weaponType: 'sword', weaponColor: 0xff88cc, hairStyle: 'long', hairColor: 0x442222, skinColor: 0xffddcc, armorType: 'medium', helmetType: null },
+        hermit: { armorColor: 0x6a5acd, pantsColor: 0x443388, weaponType: 'staff', weaponColor: 0xaa88ff, hairStyle: 'long', hairColor: 0x888888, skinColor: 0xccbb99, armorType: null, helmetType: 'hood' },
+        professor: { armorColor: 0x4488ff, pantsColor: 0x224488, weaponType: 'staff', weaponColor: 0x66bbff, hairStyle: 'short', hairColor: 0x222222, skinColor: 0xffddcc, armorType: null, helmetType: null },
+        engineer: { armorColor: 0x44aa44, pantsColor: 0x226622, weaponType: null, hairStyle: 'short', hairColor: 0x553311, skinColor: 0xddcc99, armorType: 'medium', helmetType: null },
+        alchemist: { armorColor: 0xaa44aa, pantsColor: 0x662266, weaponType: 'staff', weaponColor: 0xcc66ff, hairStyle: 'long', hairColor: 0x222222, skinColor: 0xddbb99, armorType: null, helmetType: 'hood' },
+        king: { armorColor: 0xffd700, pantsColor: 0xaa8800, weaponType: 'shield_sword', weaponColor: 0xffffff, hairStyle: 'bald', skinColor: 0xddcc99, armorType: 'heavy', helmetType: 'crown', capeColor: 0x880000 },
+        sage: { armorColor: 0xff8888, pantsColor: 0xaa4444, weaponType: 'staff', weaponColor: 0xffaaaa, hairStyle: 'long', hairColor: 0xcccccc, skinColor: 0xddcc99, armorType: null, helmetType: null, capeColor: 0xcc6666 },
+    },
+
     createNPCMeshes(region) {
         this.npcMeshes = [];
-        
+
         region.npcs.forEach(npc => {
+            const appearance = this._npcAppearances[npc.type] || {};
+
+            const humanoid = this.buildHumanoid({
+                scale: 1,
+                skinColor: appearance.skinColor || 0xffcc99,
+                bodyColor: appearance.armorColor || 0x888888,
+                armorColor: appearance.armorColor || 0x888888,
+                pantsColor: appearance.pantsColor || 0x444444,
+                bootsColor: 0x5a3a2a,
+                hairColor: appearance.hairColor || 0x333333,
+                hairStyle: appearance.hairStyle || 'short',
+                armorType: appearance.armorType || null,
+                helmetType: appearance.helmetType || null,
+                weaponType: appearance.weaponType || null,
+                weaponColor: appearance.weaponColor || 0xaaaaaa,
+                capeColor: appearance.capeColor || null,
+            });
+
             const group = new THREE.Group();
-            
-            // Body
-            const bodyGeo = new THREE.BoxGeometry(1, 2, 0.7);
-            const colors = { elder: 0x8888ff, shopkeeper: 0xDAA520, trainer: 0xff69b4, hermit: 0x6a5acd, professor: 0x4488ff, engineer: 0x44aa44, alchemist: 0xaa44aa, king: 0xffd700, sage: 0xff8888 };
-            const bodyMat = new THREE.MeshLambertMaterial({ color: colors[npc.type] || 0x888888 });
-            const body = new THREE.Mesh(bodyGeo, bodyMat);
-            body.position.y = 1;
-            body.castShadow = true;
-            group.add(body);
-            
-            // Head
-            const headGeo = new THREE.SphereGeometry(0.45, 8, 8);
-            const headMat = new THREE.MeshLambertMaterial({ color: 0xffcc99 });
-            const head = new THREE.Mesh(headGeo, headMat);
-            head.position.y = 2.3;
-            group.add(head);
-            
-            // Label
+            group.add(humanoid);
+
+            // Name label sprite
             const canvas2 = document.createElement('canvas');
             canvas2.width = 256;
             canvas2.height = 48;
             const ctx2 = canvas2.getContext('2d');
             ctx2.fillStyle = 'rgba(0,0,0,0.7)';
-            ctx2.fillRect(0, 0, 256, 48);
+            ctx2.roundRect(10, 4, 236, 40, 8);
+            ctx2.fill();
             ctx2.fillStyle = '#ffd166';
-            ctx2.font = 'bold 22px Arial';
+            ctx2.font = 'bold 20px Arial';
             ctx2.textAlign = 'center';
             ctx2.fillText(npc.name, 128, 32);
-            
             const texture = new THREE.CanvasTexture(canvas2);
             const spriteMat = new THREE.SpriteMaterial({ map: texture });
             const sprite = new THREE.Sprite(spriteMat);
             sprite.scale.set(4, 1, 1);
-            sprite.position.y = 3.2;
+            sprite.position.y = 4.8;
             group.add(sprite);
-            
-            // Interaction indicator
-            const indicGeo = new THREE.SphereGeometry(0.2, 8, 8);
+
+            // Interaction indicator (floating yellow diamond)
+            const indicGeo = new THREE.OctahedronGeometry(0.2, 0);
             const indicMat = new THREE.MeshBasicMaterial({ color: 0xffd166 });
             const indic = new THREE.Mesh(indicGeo, indicMat);
-            indic.position.y = 3.8;
+            indic.position.y = 5.4;
             indic.name = 'indicator';
             group.add(indic);
-            
+
             group.position.set(npc.x, 0, npc.z);
             group.userData = { npc };
-            
             this.scene.add(group);
             this.npcMeshes.push(group);
         });
@@ -998,25 +1345,91 @@ const Engine3D = {
     },
     
     updateEnemies(delta) {
+        const t = Date.now() * 0.003;
         this.enemyMeshes.forEach(group => {
             if (!group.userData.enemy) return;
-            // Float animation
-            group.position.y = Math.sin(Date.now() * 0.002 + group.position.x) * 0.3;
+            const enemy = group.userData.enemy;
+            const phase = group.position.x * 0.5;
+
             // Face player
             if (this.playerMesh) {
                 const dx = this.playerPos.x - group.position.x;
                 const dz = this.playerPos.z - group.position.z;
+                const dist = Math.sqrt(dx * dx + dz * dz);
                 group.rotation.y = Math.atan2(dx, dz);
+
+                // Patrol: if far from player, do idle sway; if near, step toward player
+                if (dist > 15) {
+                    // Idle patrol - small wandering
+                    group.position.x += Math.sin(t * 0.5 + phase) * 0.02;
+                    group.position.z += Math.cos(t * 0.4 + phase) * 0.02;
+                }
+            }
+
+            // Idle body bob
+            group.position.y = Math.sin(t + phase) * 0.12;
+
+            // Animate legs and arms (walking idle)
+            const humanoid = group.children[0]; // first child is the humanoid group
+            if (humanoid) {
+                const legL = humanoid.getObjectByName('legL');
+                const legR = humanoid.getObjectByName('legR');
+                const armL = humanoid.getObjectByName('armL');
+                const armR = humanoid.getObjectByName('armR');
+                const swingAmt = 0.15;
+                const swingSpeed = t * 2 + phase;
+                if (legL) legL.rotation.x = Math.sin(swingSpeed) * swingAmt;
+                if (legR) legR.rotation.x = -Math.sin(swingSpeed) * swingAmt;
+                if (armL) armL.rotation.x = -Math.sin(swingSpeed) * swingAmt * 0.7;
+                if (armR) armR.rotation.x = Math.sin(swingSpeed) * swingAmt * 0.7;
+
+                // Aura pulse for bosses
+                const aura = humanoid.getObjectByName('aura');
+                if (aura) {
+                    const pulse = 1 + Math.sin(t * 2) * 0.1;
+                    aura.scale.set(pulse, pulse, pulse);
+                }
+
+                // Cape sway
+                const cape = humanoid.getObjectByName('cape');
+                if (cape) {
+                    cape.rotation.x = 0.1 + Math.sin(t * 1.5 + phase) * 0.1;
+                }
             }
         });
     },
-    
+
     updateNPCs(delta) {
+        const t = Date.now() * 0.003;
         this.npcMeshes.forEach(group => {
             // Indicator bounce
             const indic = group.getObjectByName('indicator');
             if (indic) {
-                indic.position.y = 3.8 + Math.sin(Date.now() * 0.003) * 0.3;
+                indic.position.y = 5.4 + Math.sin(t * 1.5) * 0.3;
+                indic.rotation.y = t * 2;
+            }
+
+            // Subtle idle animation on humanoid
+            const humanoid = group.children[0];
+            if (humanoid) {
+                const armL = humanoid.getObjectByName('armL');
+                const armR = humanoid.getObjectByName('armR');
+                const phase = group.position.x * 0.3;
+                if (armL) armL.rotation.x = Math.sin(t * 0.8 + phase) * 0.08;
+                if (armR) armR.rotation.x = -Math.sin(t * 0.8 + phase) * 0.08;
+
+                const cape = humanoid.getObjectByName('cape');
+                if (cape) cape.rotation.x = 0.1 + Math.sin(t + phase) * 0.05;
+            }
+
+            // Face player when near
+            if (this.playerMesh) {
+                const dx = this.playerPos.x - group.position.x;
+                const dz = this.playerPos.z - group.position.z;
+                const dist = Math.sqrt(dx * dx + dz * dz);
+                if (dist < 10) {
+                    group.rotation.y = Math.atan2(dx, dz);
+                }
             }
         });
     },
@@ -1205,71 +1618,261 @@ const Engine3D = {
     },
     
     // Render battle scene
+    // Draw a 2D warrior figure on canvas for battle scene
+    _drawWarrior2D(ctx, x, y, scale, opts) {
+        const s = scale;
+        ctx.save();
+        ctx.translate(x, y);
+
+        // Cape
+        if (opts.capeColor) {
+            ctx.fillStyle = opts.capeColor;
+            ctx.fillRect(-18 * s, -55 * s, 36 * s, 70 * s);
+        }
+
+        // Boots
+        ctx.fillStyle = opts.bootsColor || '#3d2b1f';
+        ctx.fillRect(-16 * s, 20 * s, 14 * s, 15 * s);
+        ctx.fillRect(2 * s, 20 * s, 14 * s, 15 * s);
+
+        // Legs
+        ctx.fillStyle = opts.pantsColor || '#333366';
+        ctx.fillRect(-13 * s, -5 * s, 11 * s, 28 * s);
+        ctx.fillRect(2 * s, -5 * s, 11 * s, 28 * s);
+
+        // Torso
+        ctx.fillStyle = opts.armorColor || '#556677';
+        ctx.fillRect(-20 * s, -55 * s, 40 * s, 53 * s);
+
+        // Belt
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(-21 * s, -8 * s, 42 * s, 6 * s);
+
+        // Shoulder pads
+        if (opts.armorType === 'heavy' || opts.armorType === 'medium') {
+            ctx.fillStyle = opts.armorColor || '#666688';
+            ctx.beginPath(); ctx.arc(-22 * s, -50 * s, 10 * s, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(22 * s, -50 * s, 10 * s, 0, Math.PI * 2); ctx.fill();
+        }
+
+        // Arms
+        ctx.fillStyle = opts.armorColor || '#556677';
+        ctx.fillRect(-30 * s, -50 * s, 11 * s, 40 * s);
+        ctx.fillRect(19 * s, -50 * s, 11 * s, 40 * s);
+
+        // Hands
+        ctx.fillStyle = opts.skinColor || '#ffcc99';
+        ctx.beginPath(); ctx.arc(-24 * s, -8 * s, 5 * s, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(24 * s, -8 * s, 5 * s, 0, Math.PI * 2); ctx.fill();
+
+        // Neck
+        ctx.fillStyle = opts.skinColor || '#ffcc99';
+        ctx.fillRect(-5 * s, -62 * s, 10 * s, 10 * s);
+
+        // Head
+        ctx.beginPath(); ctx.arc(0, -75 * s, 16 * s, 0, Math.PI * 2); ctx.fill();
+
+        // Eyes
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(-6 * s, -77 * s, 3 * s, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(6 * s, -77 * s, 3 * s, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = opts.eyeColor || '#222222';
+        ctx.beginPath(); ctx.arc(-5 * s, -77 * s, 1.8 * s, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(7 * s, -77 * s, 1.8 * s, 0, Math.PI * 2); ctx.fill();
+
+        // Mouth
+        ctx.fillStyle = '#993333';
+        ctx.fillRect(-4 * s, -68 * s, 8 * s, 2 * s);
+
+        // Helmet
+        if (opts.helmetType === 'knight') {
+            ctx.fillStyle = opts.armorColor || '#888888';
+            ctx.beginPath(); ctx.arc(0, -78 * s, 18 * s, Math.PI, 0); ctx.fill();
+            ctx.fillStyle = '#333333';
+            ctx.fillRect(-12 * s, -79 * s, 24 * s, 4 * s);
+        } else if (opts.helmetType === 'crown') {
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(-14 * s, -96 * s, 28 * s, 10 * s);
+            for (let i = 0; i < 5; i++) {
+                ctx.beginPath();
+                ctx.moveTo((-12 + i * 6) * s, -96 * s);
+                ctx.lineTo((-9 + i * 6) * s, -104 * s);
+                ctx.lineTo((-6 + i * 6) * s, -96 * s);
+                ctx.fill();
+            }
+        } else if (opts.helmetType === 'hood') {
+            ctx.fillStyle = opts.armorColor || '#333355';
+            ctx.beginPath(); ctx.arc(0, -78 * s, 19 * s, Math.PI * 1.15, -0.15 * Math.PI); ctx.fill();
+        } else if (opts.helmetType === 'horned') {
+            ctx.fillStyle = opts.armorColor || '#888888';
+            ctx.beginPath(); ctx.arc(0, -78 * s, 18 * s, Math.PI, 0); ctx.fill();
+            ctx.fillStyle = '#ddddcc';
+            ctx.beginPath(); ctx.moveTo(-16 * s, -88 * s); ctx.lineTo(-22 * s, -110 * s); ctx.lineTo(-10 * s, -88 * s); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(16 * s, -88 * s); ctx.lineTo(22 * s, -110 * s); ctx.lineTo(10 * s, -88 * s); ctx.fill();
+        } else {
+            // Hair
+            ctx.fillStyle = opts.hairColor || '#222222';
+            ctx.beginPath(); ctx.arc(0, -80 * s, 17 * s, Math.PI, 0); ctx.fill();
+        }
+
+        // Weapon
+        if (opts.weaponType === 'sword' || opts.weaponType === 'shield_sword') {
+            ctx.save();
+            ctx.translate(30 * s, -20 * s);
+            ctx.rotate(-0.3);
+            ctx.fillStyle = opts.weaponColor || '#aaaaaa';
+            ctx.fillRect(-2 * s, -50 * s, 4 * s, 50 * s);
+            ctx.fillStyle = '#DAA520';
+            ctx.fillRect(-6 * s, -4 * s, 12 * s, 5 * s);
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(-3 * s, 0, 6 * s, 12 * s);
+            ctx.restore();
+            if (opts.weaponType === 'shield_sword') {
+                ctx.fillStyle = opts.armorColor || '#4466aa';
+                ctx.beginPath(); ctx.arc(-32 * s, -25 * s, 14 * s, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#FFD700';
+                ctx.beginPath(); ctx.arc(-32 * s, -25 * s, 5 * s, 0, Math.PI * 2); ctx.fill();
+            }
+        } else if (opts.weaponType === 'staff') {
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(28 * s, -80 * s, 4 * s, 90 * s);
+            ctx.fillStyle = opts.weaponColor || '#4ecdc4';
+            ctx.beginPath(); ctx.arc(30 * s, -85 * s, 8 * s, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowColor = opts.weaponColor || '#4ecdc4';
+            ctx.shadowBlur = 15;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        } else if (opts.weaponType === 'axe') {
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(28 * s, -60 * s, 4 * s, 70 * s);
+            ctx.fillStyle = opts.weaponColor || '#888888';
+            ctx.beginPath(); ctx.moveTo(32 * s, -60 * s); ctx.lineTo(48 * s, -50 * s); ctx.lineTo(32 * s, -35 * s); ctx.fill();
+        } else if (opts.weaponType === 'hammer') {
+            ctx.fillStyle = '#666666';
+            ctx.fillRect(28 * s, -65 * s, 4 * s, 75 * s);
+            ctx.fillStyle = opts.weaponColor || '#888888';
+            ctx.fillRect(20 * s, -70 * s, 22 * s, 16 * s);
+        } else if (opts.weaponType === 'dual_daggers') {
+            ctx.fillStyle = opts.weaponColor || '#aaaaaa';
+            ctx.save(); ctx.translate(28 * s, -10 * s); ctx.rotate(-0.2);
+            ctx.fillRect(-1.5 * s, -25 * s, 3 * s, 25 * s); ctx.restore();
+            ctx.save(); ctx.translate(-28 * s, -10 * s); ctx.rotate(0.2);
+            ctx.fillRect(-1.5 * s, -25 * s, 3 * s, 25 * s); ctx.restore();
+        }
+
+        // Boss glow
+        if (opts.glowColor) {
+            ctx.shadowColor = opts.glowColor;
+            ctx.shadowBlur = 25;
+            ctx.strokeStyle = opts.glowColor;
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(0, -25 * s, 50 * s, 0, Math.PI * 2); ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+
+        ctx.restore();
+    },
+
     renderBattle(playerChar, enemy, playerHpPct, enemyHpPct) {
         const canvas = document.getElementById('battle-canvas');
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
         const w = canvas.width;
         const h = canvas.height;
-        
+
         // Background gradient
         const grad = ctx.createLinearGradient(0, 0, 0, h);
         grad.addColorStop(0, '#1a0a2e');
         grad.addColorStop(1, '#0a0018');
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, w, h);
-        
-        // Ground
+
+        // Ground with perspective
         ctx.fillStyle = '#2a1a3e';
-        ctx.fillRect(0, h * 0.7, w, h * 0.3);
-        
-        // Player character
-        const pColor = playerChar ? playerChar.color : '#ff6b35';
-        ctx.fillStyle = pColor;
-        ctx.fillRect(100, h * 0.3, 60, 100);
-        ctx.fillStyle = '#ffcc99';
         ctx.beginPath();
-        ctx.arc(130, h * 0.3 - 15, 20, 0, Math.PI * 2);
+        ctx.moveTo(0, h * 0.65);
+        ctx.lineTo(w, h * 0.65);
+        ctx.lineTo(w, h);
+        ctx.lineTo(0, h);
         ctx.fill();
-        
-        // Weapon glow
+        // Ground lines
+        ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 10; i++) {
+            ctx.beginPath();
+            ctx.moveTo(w * 0.5, h * 0.65);
+            ctx.lineTo(i * (w / 9), h);
+            ctx.stroke();
+        }
+
+        // Draw player warrior
         const weaponId = Game.state ? Game.state.currentWeapon : 0;
         const weapColors = ['#4ecdc4', '#ff6b6b', '#a78bfa'];
-        ctx.strokeStyle = weapColors[weaponId];
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(160, h * 0.35);
-        ctx.lineTo(190, h * 0.25);
-        ctx.stroke();
-        ctx.shadowColor = weapColors[weaponId];
-        ctx.shadowBlur = 10;
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-        
-        // Enemy
-        const eSize = enemy && enemy.isBoss ? 1.5 : 1;
-        ctx.fillStyle = enemy && enemy.isBoss ? '#ff0000' : '#884488';
-        ctx.fillRect(w - 200, h * 0.3 - (eSize - 1) * 40, 70 * eSize, 110 * eSize);
-        ctx.fillStyle = '#ff0000';
-        ctx.beginPath();
-        ctx.arc(w - 175, h * 0.3 + 10, 8, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(w - 155, h * 0.3 + 10, 8, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Effects
-        if (Math.random() > 0.7) {
-            ctx.fillStyle = weapColors[weaponId] + '44';
+        const pColor = playerChar ? playerChar.color : '#ff6b35';
+        const charId = playerChar ? playerChar.id : 'warrior';
+        const pWeapTypes = { warrior: 'shield_sword', mage: 'staff', tank: 'hammer', ranger: 'dual_daggers' };
+        const pHelmetTypes = { warrior: 'knight', mage: 'hood', tank: 'knight', ranger: null };
+        const pArmorTypes = { warrior: 'medium', mage: null, tank: 'heavy', ranger: null };
+        const pHairStyles = { warrior: 'short', mage: 'long', tank: 'bald', ranger: 'mohawk' };
+
+        this._drawWarrior2D(ctx, 150, h * 0.62, 1.3, {
+            skinColor: '#ffcc99',
+            armorColor: pColor,
+            pantsColor: '#333355',
+            bootsColor: '#3d2b1f',
+            hairColor: '#222222',
+            hairStyle: pHairStyles[charId] || 'short',
+            armorType: pArmorTypes[charId] || 'medium',
+            helmetType: pHelmetTypes[charId],
+            weaponType: pWeapTypes[charId] || 'sword',
+            weaponColor: weapColors[weaponId],
+        });
+
+        // Draw enemy warrior
+        const eId = enemy ? enemy.id : null;
+        const eApp = eId ? (this._enemyAppearances[eId] || {}) : {};
+        const eScale = enemy && enemy.isBoss ? 1.7 : 1.3;
+        const eArmorHex = eApp.armorColor ? '#' + eApp.armorColor.toString(16).padStart(6, '0') : '#884444';
+        const eWeapHex = eApp.weaponColor ? '#' + eApp.weaponColor.toString(16).padStart(6, '0') : '#aa4444';
+        const eSkinHex = eApp.skinColor ? '#' + eApp.skinColor.toString(16).padStart(6, '0') : '#ccaa88';
+        const ePantsHex = eApp.pantsColor ? '#' + eApp.pantsColor.toString(16).padStart(6, '0') : '#333333';
+        const eHairHex = eApp.hairColor ? '#' + eApp.hairColor.toString(16).padStart(6, '0') : '#222222';
+        const eGlowHex = eApp.glowColor ? '#' + eApp.glowColor.toString(16).padStart(6, '0') : null;
+        const eCapeHex = eApp.capeColor ? '#' + eApp.capeColor.toString(16).padStart(6, '0') : null;
+
+        this._drawWarrior2D(ctx, w - 150, h * 0.62, eScale, {
+            skinColor: eSkinHex,
+            armorColor: eArmorHex,
+            pantsColor: ePantsHex,
+            bootsColor: '#3d2b1f',
+            hairColor: eHairHex,
+            hairStyle: eApp.hairStyle || 'short',
+            armorType: eApp.armorType || (enemy && enemy.isBoss ? 'heavy' : 'medium'),
+            helmetType: eApp.helmetType || (enemy && enemy.isBoss ? 'horned' : null),
+            weaponType: eApp.weaponType || 'sword',
+            weaponColor: eWeapHex,
+            capeColor: eCapeHex,
+            glowColor: eGlowHex,
+            eyeColor: enemy && enemy.isBoss ? '#ff0000' : '#222222',
+        });
+
+        // Battle effects - weapon clash sparks
+        const t = Date.now() * 0.003;
+        for (let i = 0; i < 5; i++) {
+            const sparkX = w / 2 + Math.sin(t + i * 1.3) * 60;
+            const sparkY = h * 0.4 + Math.cos(t + i * 0.9) * 40;
+            const sparkSize = Math.random() * 4 + 2;
+            ctx.fillStyle = weapColors[weaponId] + '88';
             ctx.beginPath();
-            ctx.arc(
-                200 + Math.random() * (w - 400),
-                h * 0.3 + Math.random() * 100,
-                Math.random() * 15 + 5,
-                0, Math.PI * 2
-            );
+            ctx.arc(sparkX, sparkY, sparkSize, 0, Math.PI * 2);
             ctx.fill();
         }
+
+        // VS text in center
+        ctx.fillStyle = 'rgba(255,107,53,0.15)';
+        ctx.font = 'bold 80px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('VS', w / 2, h * 0.55);
     },
     
     // Title screen animation
