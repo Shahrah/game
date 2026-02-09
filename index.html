@@ -3,45 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>محاربو الرياضيات: ساحة المعادلات</title>
+    <title>معركة العلوم: فتح المدن</title>
     <link rel="stylesheet" href="css/styles.css">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x2694;</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
 </head>
 <body>
-    <!-- GAME CANVAS -->
+    <!-- 3D GAME CANVAS -->
     <canvas id="game-canvas"></canvas>
+
+    <!-- MINIMAP -->
+    <canvas id="minimap" width="200" height="200"></canvas>
+
+    <!-- CROSSHAIR -->
+    <div id="crosshair" class="crosshair hidden">+</div>
 
     <!-- HUD OVERLAY -->
     <div id="hud" class="hud hidden">
-        <div class="hud-left">
-            <div class="hud-portrait" id="hud-portrait"></div>
-            <div class="hud-stats">
-                <div class="hud-name" id="hud-name">محارب</div>
-                <div class="hud-level" id="hud-level">م. 1</div>
-                <div class="hud-hp-bar"><div class="hud-hp-fill" id="hud-hp-fill"></div></div>
+        <div class="hud-top">
+            <div class="hud-player-info">
+                <div class="hud-avatar" id="hud-avatar"></div>
+                <div class="hud-stats">
+                    <div class="hud-name" id="hud-name">محارب العلوم</div>
+                    <div class="hud-level">المستوى <span id="hud-level">1</span></div>
+                    <div class="hud-bar health-bar">
+                        <div class="hud-bar-fill health-fill" id="hud-hp"></div>
+                        <span class="hud-bar-text" id="hud-hp-text">100/100</span>
+                    </div>
+                    <div class="hud-bar xp-bar">
+                        <div class="hud-bar-fill xp-fill" id="hud-xp"></div>
+                        <span class="hud-bar-text" id="hud-xp-text">0/100 XP</span>
+                    </div>
+                </div>
+            </div>
+            <div class="hud-resources">
+                <div class="hud-res"><span class="res-icon">🪙</span><span id="hud-gold">0</span></div>
+                <div class="hud-res"><span class="res-icon">🔑</span><span id="hud-keys">0</span></div>
+                <div class="hud-res"><span class="res-icon">⭐</span><span id="hud-stars">0</span></div>
             </div>
         </div>
-        <div class="hud-right">
-            <span class="hud-res" id="hud-gold">0 ذهب</span>
-            <span class="hud-res" id="hud-keys">0 مفتاح</span>
-            <span class="hud-res" id="hud-xp">0 خبرة</span>
+        <div class="hud-bottom">
+            <div class="hud-weapon-slots" id="hud-weapons">
+                <div class="weapon-slot active" data-slot="0">
+                    <div class="weapon-icon">📐</div>
+                    <div class="weapon-name">رياضيات</div>
+                    <div class="weapon-ammo" id="ammo-0">∞</div>
+                </div>
+                <div class="weapon-slot locked" data-slot="1">
+                    <div class="weapon-icon">⚛️</div>
+                    <div class="weapon-name">فيزياء</div>
+                    <div class="weapon-ammo" id="ammo-1">🔒</div>
+                </div>
+                <div class="weapon-slot locked" data-slot="2">
+                    <div class="weapon-icon">🧪</div>
+                    <div class="weapon-name">كيمياء</div>
+                    <div class="weapon-ammo" id="ammo-2">🔒</div>
+                </div>
+            </div>
+            <div class="hud-location" id="hud-location">القرية الأولى</div>
         </div>
-        <div class="hud-location" id="hud-location">القرية</div>
-        <div class="hud-hint" id="hud-hint">الأسهم للحركة &bull; المسافة للتفاعل</div>
-    </div>
-
-    <!-- TOUCH CONTROLS -->
-    <div id="touch-controls" class="touch-controls hidden">
-        <div class="touch-dpad">
-            <button class="touch-btn touch-up" data-dir="up">&#9650;</button>
-            <button class="touch-btn touch-left" data-dir="left">&#9664;</button>
-            <button class="touch-btn touch-center"></button>
-            <button class="touch-btn touch-right" data-dir="right">&#9654;</button>
-            <button class="touch-btn touch-down" data-dir="down">&#9660;</button>
-        </div>
-        <div class="touch-actions">
-            <button class="touch-btn touch-action" id="touch-interact">&#9889;</button>
-            <button class="touch-btn touch-inv" id="touch-inventory">&#128188;</button>
+        <div class="hud-compass" id="hud-compass">
+            <span class="compass-dir">ش</span>
         </div>
     </div>
 
@@ -50,42 +71,59 @@
         <div class="title-bg">
             <canvas id="title-canvas"></canvas>
             <div class="title-content">
-                <h1 class="game-title">محاربو الرياضيات</h1>
-                <h2 class="game-subtitle">ساحة المعادلات</h2>
-                <p class="title-tagline">استكشف &bull; حُل &bull; قاتل &bull; انتصر</p>
-                <div class="title-buttons">
-                    <button class="btn btn-primary btn-glow" id="btn-new-game">لعبة جديدة</button>
-                    <button class="btn btn-secondary" id="btn-continue" style="display:none">متابعة</button>
-                    <button class="btn btn-ghost" id="btn-how-to-play">كيف تلعب</button>
+                <div class="title-logo">
+                    <h1 class="game-title">معركة العلوم</h1>
+                    <h2 class="game-subtitle">فتح المدن والقرى</h2>
                 </div>
-                <div class="sound-toggle" id="sound-toggle">الصوت: مفعّل</div>
+                <p class="title-tagline">تعلّم الرياضيات والفيزياء والكيمياء بأسلوب المعارك الحربية</p>
+                <div class="title-features">
+                    <div class="feature">📐 رياضيات</div>
+                    <div class="feature">⚛️ فيزياء</div>
+                    <div class="feature">🧪 كيمياء</div>
+                    <div class="feature">🏰 مدن وقرى</div>
+                </div>
+                <div class="title-buttons">
+                    <button class="btn btn-primary btn-glow" id="btn-new-game">بدء المعركة</button>
+                    <button class="btn btn-secondary" id="btn-continue" style="display:none">متابعة اللعب</button>
+                    <button class="btn btn-ghost" id="btn-how-to-play">كيف تلعب</button>
+                    <button class="btn btn-ghost" id="btn-world-map">خريطة العالم</button>
+                </div>
+                <div class="sound-toggle" id="sound-toggle">🔊 الصوت</div>
             </div>
         </div>
     </div>
 
     <!-- HOW TO PLAY -->
     <div id="screen-tutorial" class="overlay">
-        <div class="panel">
+        <div class="panel tutorial-panel">
             <h2 class="panel-title">كيف تلعب</h2>
             <div class="tut-grid">
-                <div class="tut-item"><span class="tut-key">مفاتيح الأسهم / WASD</span> حرّك شخصيتك</div>
-                <div class="tut-item"><span class="tut-key">المسافة / E</span> تحدث وتفاعل</div>
-                <div class="tut-item"><span class="tut-key">امشِ نحو الأعداء</span> ابدأ معركة رياضيات</div>
-                <div class="tut-item"><span class="tut-key">I</span> افتح المخزون</div>
-                <div class="tut-item"><span class="tut-key">أزرار اللمس</span> تحكم بالجوال</div>
-                <div class="tut-item"><span class="tut-key">1-4</span> اختر إجابة في المعركة</div>
-            </div>
-            <div class="tut-section">
-                <h3>استكشف</h3>
-                <p>تجوّل في القرى والغابات والكهوف والقلاع. تحدث مع الشخصيات للحصول على أدلة وتلميحات. اعثر على صناديق الكنز ذات المكافآت السرية.</p>
-            </div>
-            <div class="tut-section">
-                <h3>قاتل</h3>
-                <p>عندما تواجه عدواً، حل مسائل الرياضيات للهجوم! الإجابات الصحيحة تُلحق الضرر بالعدو. الإجابات الخاطئة تسمح للعدو بضربك. اربط الإجابات الصحيحة للحصول على ضرر متتابع!</p>
-            </div>
-            <div class="tut-section">
-                <h3>التقدم</h3>
-                <p>اكسب الذهب ونقاط الخبرة من المعارك. اشترِ العناصر من المتجر. افتح مناطق جديدة بهزيمة الزعماء. اعثر على أسرار مخفية في كل عالم!</p>
+                <div class="tut-section">
+                    <h3>🎮 التحكم</h3>
+                    <div class="tut-item"><span class="tut-key">W A S D</span> حرّك الشخصية</div>
+                    <div class="tut-item"><span class="tut-key">الماوس</span> انظر حولك</div>
+                    <div class="tut-item"><span class="tut-key">E</span> تفاعل مع الأشياء</div>
+                    <div class="tut-item"><span class="tut-key">1 2 3</span> تبديل الأسلحة</div>
+                    <div class="tut-item"><span class="tut-key">Tab</span> خريطة العالم</div>
+                    <div class="tut-item"><span class="tut-key">Shift</span> الركض</div>
+                </div>
+                <div class="tut-section">
+                    <h3>⚔️ نظام القتال</h3>
+                    <p>عند مواجهة عدو، اختر سلاحك العلمي (رياضيات/فيزياء/كيمياء) ثم أجب على الأسئلة لإلحاق الضرر بالعدو.</p>
+                    <p>الإجابة الصحيحة = هجوم قوي</p>
+                    <p>الإجابة الخاطئة = العدو يهاجمك</p>
+                    <p>إجابات متتالية صحيحة = كومبو مدمّر!</p>
+                </div>
+                <div class="tut-section">
+                    <h3>🗺️ فتح المدن</h3>
+                    <p>اهزم أعداء كل منطقة وزعيمها لفتح المنطقة التالية. كل منطقة تحتوي على أسئلة من مستوى مختلف.</p>
+                </div>
+                <div class="tut-section">
+                    <h3>🔫 الأسلحة العلمية</h3>
+                    <p><strong>📐 سلاح الرياضيات:</strong> جبر، هندسة، تفاضل وتكامل</p>
+                    <p><strong>⚛️ سلاح الفيزياء:</strong> ميكانيكا، كهرباء، موجات</p>
+                    <p><strong>🧪 سلاح الكيمياء:</strong> عناصر، تفاعلات، محاليل</p>
+                </div>
             </div>
             <button class="btn btn-primary" id="btn-tut-back">رجوع</button>
         </div>
@@ -96,51 +134,90 @@
         <div class="panel">
             <h2 class="panel-title">اختر محاربك</h2>
             <div class="char-name-row">
-                <label>اسمك:</label>
-                <input type="text" id="player-name" placeholder="محارب" maxlength="16" autocomplete="off">
+                <label>اسم المحارب:</label>
+                <input type="text" id="player-name" placeholder="محارب العلوم" maxlength="16" autocomplete="off">
             </div>
             <div class="char-grid" id="char-grid"></div>
-            <button class="btn btn-primary btn-glow" id="btn-start" disabled>ابدأ المغامرة</button>
+            <div class="difficulty-select">
+                <h3>المرحلة الدراسية</h3>
+                <div class="diff-options">
+                    <button class="diff-btn active" data-grade="1">أول ثانوي</button>
+                    <button class="diff-btn" data-grade="2">ثاني ثانوي</button>
+                    <button class="diff-btn" data-grade="3">ثالث ثانوي</button>
+                </div>
+            </div>
+            <button class="btn btn-primary btn-glow" id="btn-start" disabled>ابدأ المعركة</button>
         </div>
     </div>
 
-    <!-- DIALOG BOX -->
-    <div id="dialog-box" class="dialog-box hidden">
-        <div class="dialog-name" id="dialog-name">شخصية</div>
-        <div class="dialog-text" id="dialog-text">مرحباً!</div>
-        <div class="dialog-prompt">اضغط المسافة أو زر التفاعل للمتابعة</div>
+    <!-- WORLD MAP -->
+    <div id="screen-worldmap" class="overlay">
+        <div class="panel worldmap-panel">
+            <h2 class="panel-title">خريطة العالم</h2>
+            <div class="worldmap-container" id="worldmap-container">
+                <canvas id="worldmap-canvas" width="800" height="500"></canvas>
+            </div>
+            <div class="worldmap-info" id="worldmap-info">
+                <h3 id="map-region-name">اختر منطقة</h3>
+                <p id="map-region-desc">اضغط على منطقة لرؤية التفاصيل</p>
+                <div id="map-region-stats"></div>
+            </div>
+            <div class="worldmap-buttons">
+                <button class="btn btn-primary" id="btn-travel" disabled>سافر إلى المنطقة</button>
+                <button class="btn btn-ghost" id="btn-map-close">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- WEAPON SELECT -->
+    <div id="screen-weapons" class="overlay">
+        <div class="panel weapons-panel">
+            <h2 class="panel-title">اختر سلاحك العلمي</h2>
+            <div class="weapons-grid" id="weapons-grid"></div>
+            <button class="btn btn-ghost" id="btn-weapons-close">إغلاق</button>
+        </div>
     </div>
 
     <!-- BATTLE OVERLAY -->
     <div id="screen-battle" class="overlay">
         <div class="battle-ui">
+            <div class="battle-arena">
+                <canvas id="battle-canvas" width="800" height="300"></canvas>
+            </div>
             <div class="battle-top">
-                <div class="battle-fighter-info">
+                <div class="battle-fighter player-fighter">
                     <span class="bf-name" id="bf-player-name">اللاعب</span>
                     <div class="bf-hp-bar"><div class="bf-hp-fill player-hp" id="bf-player-hp"></div></div>
                     <span class="bf-hp-text" id="bf-player-hp-text">100/100</span>
-                    <div class="bf-special-bar"><div class="bf-special-fill" id="bf-special-fill"></div></div>
+                    <div class="bf-weapon" id="bf-player-weapon">📐 رياضيات</div>
                 </div>
-                <div class="battle-vs">ضد</div>
-                <div class="battle-fighter-info">
+                <div class="battle-vs-container">
+                    <div class="battle-vs">VS</div>
+                    <div class="battle-combo" id="battle-combo" style="display:none">
+                        كومبو x<span id="combo-num">2</span>
+                    </div>
+                </div>
+                <div class="battle-fighter enemy-fighter">
                     <span class="bf-name" id="bf-enemy-name">العدو</span>
                     <div class="bf-hp-bar"><div class="bf-hp-fill enemy-hp" id="bf-enemy-hp"></div></div>
                     <span class="bf-hp-text" id="bf-enemy-hp-text">100/100</span>
+                    <div class="bf-enemy-level" id="bf-enemy-level">م.1</div>
                 </div>
             </div>
-            <div class="battle-combo" id="battle-combo" style="display:none">كومبو x<span id="combo-num">2</span></div>
             <div class="battle-question-area" dir="ltr">
                 <div class="bq-header">
-                    <span class="bq-category" id="bq-category">حساب</span>
+                    <span class="bq-category" id="bq-category">رياضيات</span>
+                    <span class="bq-difficulty" id="bq-difficulty">سهل</span>
                     <span class="bq-timer" id="bq-timer">30</span>
                 </div>
                 <div class="bq-text" id="bq-text">جارٍ التحميل...</div>
                 <div class="bq-hint" id="bq-hint" style="display:none"></div>
                 <div class="bq-answers" id="bq-answers"></div>
+                <div class="bq-explanation" id="bq-explanation" style="display:none"></div>
                 <div class="bq-actions">
-                    <button class="btn btn-small btn-ghost" id="btn-hint" style="display:none">تلميح</button>
-                    <button class="btn btn-small btn-ghost" id="btn-item" style="display:none">عنصر</button>
-                    <button class="btn btn-primary" id="btn-submit" disabled>إرسال</button>
+                    <button class="btn btn-small btn-hint" id="btn-hint">💡 تلميح</button>
+                    <button class="btn btn-small btn-item" id="btn-use-item">🧰 عنصر</button>
+                    <button class="btn btn-primary" id="btn-submit" disabled>إرسال الإجابة</button>
                 </div>
             </div>
             <div class="battle-msg" id="battle-msg" style="display:none"></div>
@@ -154,10 +231,8 @@
             <div class="victory-stars" id="victory-stars"></div>
             <div class="victory-stats" id="victory-stats"></div>
             <div class="victory-rewards" id="victory-rewards"></div>
-            <div class="victory-secret" id="victory-secret" style="display:none"></div>
-            <div class="victory-buttons">
-                <button class="btn btn-primary" id="btn-victory-continue">متابعة</button>
-            </div>
+            <div class="victory-unlock" id="victory-unlock" style="display:none"></div>
+            <button class="btn btn-primary" id="btn-victory-continue">متابعة</button>
         </div>
     </div>
 
@@ -165,10 +240,10 @@
     <div id="screen-defeat" class="overlay">
         <div class="panel defeat-panel">
             <h2 class="defeat-title">هُزمت!</h2>
-            <p class="defeat-msg">ادرس الحلول وحاول مرة أخرى!</p>
+            <p class="defeat-msg">راجع الحلول وحاول مرة أخرى!</p>
             <div class="defeat-review" id="defeat-review"></div>
             <button class="btn btn-primary" id="btn-retry">حاول مرة أخرى</button>
-            <button class="btn btn-ghost" id="btn-retreat">انسحب إلى القرية</button>
+            <button class="btn btn-ghost" id="btn-retreat">انسحب</button>
         </div>
     </div>
 
@@ -176,51 +251,77 @@
     <div id="screen-shop" class="overlay">
         <div class="panel">
             <div class="shop-header">
-                <h2 class="panel-title">المتجر</h2>
-                <span class="shop-gold" id="shop-gold-display">0 ذهب</span>
+                <h2 class="panel-title">متجر الأسلحة</h2>
+                <span class="shop-gold" id="shop-gold">🪙 0</span>
+            </div>
+            <div class="shop-tabs">
+                <button class="shop-tab active" data-tab="weapons">أسلحة</button>
+                <button class="shop-tab" data-tab="items">عناصر</button>
+                <button class="shop-tab" data-tab="upgrades">ترقيات</button>
             </div>
             <div class="shop-grid" id="shop-grid"></div>
             <button class="btn btn-ghost" id="btn-shop-close">إغلاق</button>
         </div>
     </div>
 
-    <!-- INVENTORY OVERLAY -->
-    <div id="screen-inventory" class="overlay">
-        <div class="panel">
-            <h2 class="panel-title">المخزون</h2>
-            <div class="inv-grid" id="inv-grid"></div>
-            <button class="btn btn-ghost" id="btn-inv-close">إغلاق</button>
+    <!-- DIALOG BOX -->
+    <div id="dialog-box" class="dialog-box hidden">
+        <div class="dialog-portrait" id="dialog-portrait"></div>
+        <div class="dialog-content">
+            <div class="dialog-name" id="dialog-name">شخصية</div>
+            <div class="dialog-text" id="dialog-text">مرحباً!</div>
         </div>
+        <div class="dialog-prompt">اضغط E أو المسافة للمتابعة</div>
     </div>
 
     <!-- NOTIFICATIONS -->
     <div id="notif-container" class="notif-container"></div>
 
-    <!-- LEVEL UP OVERLAY -->
+    <!-- LEVEL UP -->
     <div id="level-up" class="level-up hidden">
         <h2>ارتقاء مستوى!</h2>
-        <p id="level-up-text">مستوى 2</p>
+        <p id="level-up-text">المستوى 2</p>
+        <p id="level-up-unlock"></p>
     </div>
 
-    <script>
-    // roundRect polyfill
-    if (!CanvasRenderingContext2D.prototype.roundRect) {
-        CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r) {
-            r = Math.min(r||0, w/2, h/2);
-            this.moveTo(x+r,y);
-            this.arcTo(x+w,y,x+w,y+h,r);
-            this.arcTo(x+w,y+h,x,y+h,r);
-            this.arcTo(x,y+h,x,y,r);
-            this.arcTo(x,y,x+w,y,r);
-            this.closePath();
-            return this;
-        };
-    }
-    </script>
+    <!-- REGION UNLOCK -->
+    <div id="region-unlock" class="region-unlock hidden">
+        <h2 id="region-unlock-title">تم فتح منطقة جديدة!</h2>
+        <p id="region-unlock-name"></p>
+    </div>
+
+    <!-- LOADING SCREEN -->
+    <div id="screen-loading" class="overlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <h2>جارٍ تحميل العالم...</h2>
+            <div class="loading-bar"><div class="loading-fill" id="loading-fill"></div></div>
+            <p class="loading-tip" id="loading-tip">هل تعلم؟ قوة الجاذبية على الأرض = 9.8 م/ث²</p>
+        </div>
+    </div>
+
+    <!-- TOUCH CONTROLS -->
+    <div id="touch-controls" class="touch-controls hidden">
+        <div class="touch-joystick" id="touch-joystick">
+            <div class="joystick-base">
+                <div class="joystick-thumb" id="joystick-thumb"></div>
+            </div>
+        </div>
+        <div class="touch-look" id="touch-look"></div>
+        <div class="touch-buttons">
+            <button class="touch-btn touch-interact" id="touch-interact">E</button>
+            <button class="touch-btn touch-shoot" id="touch-shoot">🎯</button>
+            <button class="touch-btn touch-jump" id="touch-jump">⬆</button>
+            <button class="touch-btn touch-map" id="touch-map">🗺️</button>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="js/sound.js"></script>
-    <script src="js/sprites.js"></script>
-    <script src="js/maps.js"></script>
-    <script src="js/math.js"></script>
+    <script src="js/questions.js"></script>
+    <script src="js/world.js"></script>
+    <script src="js/engine3d.js"></script>
     <script src="js/game.js"></script>
     <script src="js/app.js"></script>
 </body>

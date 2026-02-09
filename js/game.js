@@ -1,1166 +1,752 @@
 /* ============================================
-   GAME ENGINE - Loop, Movement, Combat, State
-   Arabic UI version with touch controls
+   GAME LOGIC - State, Battles, Progression
    ============================================ */
+
 const Game = {
-    canvas: null, ctx: null,
-    mode: 'title', // title, explore, battle, dialog, menu
+    mode: 'title',
     state: null,
     defaultState: {
-        playerName:'\u0645\u062D\u0627\u0631\u0628', characterId:'knight', playerLevel:1, xp:0,
-        gold:100, keys:0, completedEnemies:[], inventory:{}, achievements:[],
-        secretsFound:[], totalCorrect:0, totalQuestions:0, totalPurchases:0,
-        bossesDefeated:[], speedAnswers:0, currentMap:'village',
-        playerX:14, playerY:18
+        playerName: 'محارب العلوم',
+        characterId: 'warrior',
+        grade: 1,
+        playerLevel: 1,
+        xp: 0,
+        maxHp: 120,
+        currentHp: 120,
+        gold: 100,
+        keys: 0,
+        stars: 0,
+        currentRegion: 'village',
+        currentWeapon: 0,
+        completedEnemies: [],
+        openedChests: [],
+        inventory: {},
+        unlockedRegions: ['village'],
+        unlockedWeapons: [0],
+        weaponDamage: [25, 30, 35],
+        totalCorrect: 0,
+        totalQuestions: 0,
+        bossesDefeated: [],
+        achievements: [],
     },
 
-    // Player state
-    player: { x:0, y:0, dir:'down', frame:0, moving:false, moveTimer:0 },
-    camera: { x:0, y:0 },
-    keys: {},
-    touchDir: null,
-    currentMap: null,
-    mapEnemies: [],
-    animFrame: 0,
-    isTouchDevice: false,
-
-    // Battle state
     battle: null,
     selectedAnswer: null,
-    _timer: null,
-    _timerStart: 0,
+    battleTimer: null,
+    battleTimeLeft: 0,
+    combo: 0,
+    dialogQueue: [],
+    dialogCallback: null,
+    _selectedMapRegion: null,
 
-    // Particles
-    particles: [],
-    _particlesInited: false,
+    xpTable: [0,100,250,450,700,1000,1400,1900,2500,3200,4000,5000,6500,8000,10000,12000,15000,18000,22000,27000],
 
-    // ---- Characters data ----
-    characters: [
-        { id:'knight', name:'\u0641\u0627\u0631\u0633 \u0627\u0644\u0645\u0639\u0627\u062F\u0644\u0627\u062A', desc:'\u0645\u0642\u0627\u062A\u0644 \u0645\u062A\u0648\u0627\u0632\u0646', hp:120, dmg:25, def:10, unlocked:true },
-        { id:'mage', name:'\u0633\u0627\u062D\u0631 \u0627\u0644\u0623\u0631\u0642\u0627\u0645', desc:'\u0636\u0631\u0631 \u0639\u0627\u0644\u064A', hp:90, dmg:35, def:5, unlocked:true },
-        { id:'ranger', name:'\u062D\u0627\u0631\u0633 \u0627\u0644\u0643\u0633\u0648\u0631', desc:'\u0645\u0647\u0627\u062C\u0645 \u0633\u0631\u064A\u0639', hp:100, dmg:28, def:8, unlocked:true },
-        { id:'paladin', name:'\u0641\u0627\u0631\u0633 \u0627\u0644\u0647\u0646\u062F\u0633\u0629', desc:'\u062F\u0628\u0627\u0628\u0629 \u0645\u0639 \u0634\u0641\u0627\u0621', hp:150, dmg:20, def:15, unlocked:true },
-    ],
-    shopItems: [
-        { id:'health_potion', name:'\u062C\u0631\u0639\u0629 \u0635\u062D\u0629', icon:'\u2764', desc:'\u062A\u0633\u062A\u0639\u064A\u062F 40 \u0635\u062D\u0629', price:50, effect:{type:'heal',value:40}, max:5 },
-        { id:'super_potion', name:'\u062C\u0631\u0639\u0629 \u062E\u0627\u0631\u0642\u0629', icon:'\u2728', desc:'\u062A\u0633\u062A\u0639\u064A\u062F 80 \u0635\u062D\u0629', price:120, effect:{type:'heal',value:80}, max:3 },
-        { id:'hint_scroll', name:'\u0644\u0641\u0627\u0641\u0629 \u062A\u0644\u0645\u064A\u062D', icon:'\u2753', desc:'\u062A\u0643\u0634\u0641 \u062A\u0644\u0645\u064A\u062D\u0627\u064B', price:30, effect:{type:'hint'}, max:10 },
-        { id:'shield_charm', name:'\u062A\u0639\u0648\u064A\u0630\u0629 \u062F\u0631\u0639', icon:'\u26E8', desc:'\u062A\u0635\u062F \u0627\u0644\u0647\u062C\u0648\u0645 \u0627\u0644\u0642\u0627\u062F\u0645', price:80, effect:{type:'shield'}, max:3 },
-        { id:'power_gem', name:'\u062C\u0648\u0647\u0631\u0629 \u0627\u0644\u0642\u0648\u0629', icon:'\u2694', desc:'\u0627\u0644\u0636\u0631\u0628\u0629 \u0627\u0644\u0642\u0627\u062F\u0645\u0629 \u0645\u0636\u0627\u0639\u0641\u0629', price:100, effect:{type:'power',value:2}, max:3 },
-    ],
-    achievements: [
-        { id:'first_blood', name:'\u0627\u0644\u062F\u0645 \u0627\u0644\u0623\u0648\u0644', desc:'\u0627\u0631\u0628\u062D \u0645\u0639\u0631\u0643\u062A\u0643 \u0627\u0644\u0623\u0648\u0644\u0649' },
-        { id:'combo5', name:'\u0633\u064A\u062F \u0627\u0644\u0643\u0648\u0645\u0628\u0648', desc:'\u0627\u062D\u0635\u0644 \u0639\u0644\u0649 \u0643\u0648\u0645\u0628\u0648 5x' },
-        { id:'speed5', name:'\u0627\u0644\u0633\u0631\u0639\u0629 \u0627\u0644\u062E\u0627\u0631\u0642\u0629', desc:'5 \u0625\u062C\u0627\u0628\u0627\u062A \u0641\u064A \u0623\u0642\u0644 \u0645\u0646 5 \u062B\u0648\u0627\u0646\u064D' },
-        { id:'boss_slayer', name:'\u0642\u0627\u062A\u0644 \u0627\u0644\u0632\u0639\u0645\u0627\u0621', desc:'\u0627\u0647\u0632\u0645 \u0632\u0639\u064A\u0645\u0627\u064B' },
-        { id:'chest_finder', name:'\u0635\u064A\u0627\u062F \u0627\u0644\u0643\u0646\u0648\u0632', desc:'\u0627\u0641\u062A\u062D \u0635\u0646\u062F\u0648\u0642 \u0643\u0646\u0632' },
-        { id:'all_forest', name:'\u062A\u0637\u0647\u064A\u0631 \u0627\u0644\u063A\u0627\u0628\u0629', desc:'\u0627\u0647\u0632\u0645 \u062C\u0645\u064A\u0639 \u0623\u0639\u062F\u0627\u0621 \u0627\u0644\u063A\u0627\u0628\u0629' },
-        { id:'all_cave', name:'\u062A\u0637\u0647\u064A\u0631 \u0627\u0644\u0643\u0647\u0641', desc:'\u0627\u0647\u0632\u0645 \u062C\u0645\u064A\u0639 \u0623\u0639\u062F\u0627\u0621 \u0627\u0644\u0643\u0647\u0641' },
-        { id:'all_castle', name:'\u062A\u0637\u0647\u064A\u0631 \u0627\u0644\u0642\u0644\u0639\u0629', desc:'\u0627\u0647\u0632\u0645 \u062C\u0645\u064A\u0639 \u0623\u0639\u062F\u0627\u0621 \u0627\u0644\u0642\u0644\u0639\u0629' },
-        { id:'math_genius', name:'\u0639\u0628\u0642\u0631\u064A \u0627\u0644\u0631\u064A\u0627\u0636\u064A\u0627\u062A', desc:'100 \u0625\u062C\u0627\u0628\u0629 \u0635\u062D\u064A\u062D\u0629' },
-        { id:'game_complete', name:'\u0627\u0644\u0628\u0637\u0644', desc:'\u0627\u0647\u0632\u0645 \u0633\u064A\u062F \u0627\u0644\u0638\u0644\u0627\u0645' },
-    ],
-    xpTable: [0,100,250,450,700,1000,1400,1900,2500,3200,4000,5000,6500,8000,10000],
-
-    // NPC type labels in Arabic
-    npcLabels: {
-        elder: '\u0627\u0644\u0634\u064A\u062E',
-        shopkeeper: '\u0627\u0644\u062A\u0627\u062C\u0631',
-        guard: '\u0627\u0644\u062D\u0627\u0631\u0633',
-        wizard: '\u0627\u0644\u0633\u0627\u062D\u0631',
-        girl: '\u0627\u0644\u0641\u062A\u0627\u0629',
-        boy: '\u0627\u0644\u0641\u062A\u0649',
-        villager: '\u0642\u0631\u0648\u064A',
-        Sign: '\u0644\u0648\u062D\u0629'
-    },
-
-    // ---- Init ----
     init() {
-        this.canvas = document.getElementById('game-canvas');
-        this.ctx = this.canvas.getContext('2d');
-        this.resize();
-        window.addEventListener('resize', () => this.resize());
         this.loadState();
-        this.setupInput();
-        this.detectTouch();
-        this.renderTitleBg();
-        requestAnimationFrame(t => this.loop(t));
+        this.setupUIEvents();
     },
 
-    resize() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
-    },
-
-    detectTouch() {
-        this.isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-    },
-
-    // ---- State ----
     loadState() {
-        const s = localStorage.getItem('mathWarriorsState3');
-        if (s) { try { this.state = {...this.defaultState, ...JSON.parse(s)}; } catch(e) { this.state = {...this.defaultState}; } }
-        else this.state = {...this.defaultState};
-    },
-    saveState() { localStorage.setItem('mathWarriorsState3', JSON.stringify(this.state)); },
-    hasSave() { return !!localStorage.getItem('mathWarriorsState3'); },
-
-    // ---- Input ----
-    setupInput() {
-        document.addEventListener('keydown', e => {
-            this.keys[e.key] = true;
-            if (this.mode === 'dialog') {
-                if (e.key === ' ' || e.key === 'e' || e.key === 'E' || e.key === 'Enter') this.advanceDialog();
+        try {
+            const saved = localStorage.getItem('scienceBattle3D_save');
+            if (saved) {
+                this.state = { ...this.defaultState, ...JSON.parse(saved) };
+                const btnContinue = document.getElementById('btn-continue');
+                if (btnContinue) btnContinue.style.display = 'block';
             }
+        } catch (e) {}
+    },
+
+    saveState() {
+        if (!this.state) return;
+        try { localStorage.setItem('scienceBattle3D_save', JSON.stringify(this.state)); } catch(e) {}
+    },
+
+    newGame(name, characterId, grade) {
+        this.state = { ...this.defaultState };
+        this.state.playerName = name || 'محارب العلوم';
+        this.state.characterId = characterId;
+        this.state.grade = grade;
+        const char = World.characters.find(c => c.id === characterId);
+        if (char) {
+            this.state.maxHp = char.hp;
+            this.state.currentHp = char.hp;
+            this.state.weaponDamage[0] = char.dmg;
+        }
+        this.saveState();
+        this.startExploring('village');
+    },
+
+    continueGame() {
+        if (!this.state) return;
+        this.startExploring(this.state.currentRegion);
+    },
+
+    startExploring(regionId) {
+        this.mode = 'explore';
+        this.state.currentRegion = regionId;
+        this.saveState();
+        this.showScreen('screen-loading');
+        const tip = document.getElementById('loading-tip');
+        if (tip) tip.textContent = World.getRandomTip();
+        let progress = 0;
+        const loadingFill = document.getElementById('loading-fill');
+        const loadInterval = setInterval(() => {
+            progress += Math.random() * 20 + 10;
+            if (loadingFill) loadingFill.style.width = Math.min(progress, 100) + '%';
+            if (progress >= 100) {
+                clearInterval(loadInterval);
+                setTimeout(() => {
+                    Engine3D.loadRegion(regionId);
+                    this.updateHUD();
+                    document.getElementById('hud').classList.remove('hidden');
+                    document.getElementById('crosshair').classList.remove('hidden');
+                    const minimap = document.getElementById('minimap');
+                    if (minimap) minimap.classList.add('visible');
+                    this.hideAllScreens();
+                    Engine3D.updateWeaponVisual();
+                    const region = World.getRegion(regionId);
+                    if (region && region.unlocksWeapon !== undefined) {
+                        if (!this.state.unlockedWeapons.includes(region.unlocksWeapon)) {
+                            this.state.unlockedWeapons.push(region.unlocksWeapon);
+                            const weapon = World.getWeapon(region.unlocksWeapon);
+                            if (weapon) {
+                                this.notify('تم فتح ' + weapon.name + '!', 'success');
+                                this.updateWeaponSlots();
+                            }
+                            this.saveState();
+                        }
+                    }
+                    if (region) {
+                        this.notify(region.name, 'info');
+                        const locEl = document.getElementById('hud-location');
+                        if (locEl) locEl.textContent = region.name;
+                    }
+                }, 300);
+            }
+        }, 100);
+    },
+
+    setupUIEvents() {
+        document.getElementById('btn-new-game').addEventListener('click', () => {
+            this.showScreen('screen-charselect');
+            this.renderCharacterSelect();
+        });
+        const btnContinue = document.getElementById('btn-continue');
+        if (btnContinue) btnContinue.addEventListener('click', () => this.continueGame());
+        document.getElementById('btn-how-to-play').addEventListener('click', () => this.showScreen('screen-tutorial'));
+        document.getElementById('btn-tut-back').addEventListener('click', () => this.showScreen('screen-title'));
+        const btnWorldMap = document.getElementById('btn-world-map');
+        if (btnWorldMap) btnWorldMap.addEventListener('click', () => this.showWorldMap());
+
+        document.getElementById('btn-start').addEventListener('click', () => {
+            const nameInput = document.getElementById('player-name');
+            const name = nameInput.value.trim() || 'محارب العلوم';
+            const selectedChar = document.querySelector('.char-card.selected');
+            if (!selectedChar) return;
+            const charId = selectedChar.dataset.charId;
+            const activeGrade = document.querySelector('.diff-btn.active');
+            const grade = activeGrade ? parseInt(activeGrade.dataset.grade) : 1;
+            this.newGame(name, charId, grade);
+        });
+
+        document.querySelectorAll('.diff-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        document.getElementById('sound-toggle').addEventListener('click', () => {
+            Sound.toggle();
+            document.getElementById('sound-toggle').textContent = Sound.enabled ? '🔊 الصوت' : '🔇 الصوت';
+        });
+
+        document.getElementById('btn-submit').addEventListener('click', () => this.submitAnswer());
+        document.getElementById('btn-hint').addEventListener('click', () => this.useHint());
+        document.getElementById('btn-victory-continue').addEventListener('click', () => {
+            this.hideAllScreens();
+            this.mode = 'explore';
+        });
+        document.getElementById('btn-retry').addEventListener('click', () => {
+            if (this.battle) this.startBattle(this.battle.enemy);
+        });
+        document.getElementById('btn-retreat').addEventListener('click', () => {
+            this.hideAllScreens();
+            this.state.currentHp = Math.max(this.state.currentHp, 30);
+            this.saveState();
+            this.mode = 'explore';
+        });
+        const btnShopClose = document.getElementById('btn-shop-close');
+        if (btnShopClose) btnShopClose.addEventListener('click', () => { this.hideAllScreens(); this.mode = 'explore'; });
+        document.querySelectorAll('.shop-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                this.renderShop(tab.dataset.tab);
+            });
+        });
+        const btnMapClose = document.getElementById('btn-map-close');
+        if (btnMapClose) btnMapClose.addEventListener('click', () => {
+            if (this.mode === 'explore') this.hideAllScreens();
+            else this.showScreen('screen-title');
+        });
+        const btnTravel = document.getElementById('btn-travel');
+        if (btnTravel) btnTravel.addEventListener('click', () => {
+            const selected = this._selectedMapRegion;
+            if (selected && this.state && this.state.unlockedRegions.includes(selected)) this.startExploring(selected);
+        });
+        document.querySelectorAll('.weapon-slot').forEach(slot => {
+            slot.addEventListener('click', () => {
+                const slotNum = parseInt(slot.dataset.slot);
+                if (this.state && this.state.unlockedWeapons.includes(slotNum)) {
+                    this.state.currentWeapon = slotNum;
+                    this.updateWeaponSlots();
+                    Engine3D.updateWeaponVisual();
+                    Sound.play('select');
+                }
+            });
+        });
+        document.addEventListener('keydown', (e) => {
             if (this.mode === 'explore') {
-                if (e.key === ' ' || e.key === 'e' || e.key === 'E') this.interact();
-                if (e.key === 'i' || e.key === 'I') this.openInventory();
+                if (e.code === 'KeyE' || e.code === 'Space') this.interact();
+                if (e.code === 'Tab') { e.preventDefault(); this.showWorldMap(); }
+                if (e.code === 'Digit1') this.switchWeapon(0);
+                if (e.code === 'Digit2') this.switchWeapon(1);
+                if (e.code === 'Digit3') this.switchWeapon(2);
+            }
+            if (this.mode === 'dialog') {
+                if (e.code === 'Space' || e.code === 'KeyE') this.advanceDialog();
             }
             if (this.mode === 'battle') {
-                if (['1','2','3','4'].includes(e.key)) {
-                    const btns = document.querySelectorAll('.answer-btn');
-                    if (btns[parseInt(e.key)-1]) btns[parseInt(e.key)-1].click();
-                }
-                if (e.key === 'Enter' && this.selectedAnswer !== null) this.submitAnswer();
+                if (e.code === 'Digit1') this.selectBattleAnswer(0);
+                if (e.code === 'Digit2') this.selectBattleAnswer(1);
+                if (e.code === 'Digit3') this.selectBattleAnswer(2);
+                if (e.code === 'Digit4') this.selectBattleAnswer(3);
+                if (e.code === 'Enter') this.submitAnswer();
+            }
+            if (e.code === 'Escape') {
+                if (this.mode === 'menu' || this.mode === 'dialog') { this.hideAllScreens(); this.mode = 'explore'; }
             }
         });
-        document.addEventListener('keyup', e => { this.keys[e.key] = false; });
-    },
-
-    // ---- Touch input ----
-    setupTouchControls() {
-        const dpad = document.querySelectorAll('.touch-dpad .touch-btn[data-dir]');
-        dpad.forEach(btn => {
-            const dir = btn.getAttribute('data-dir');
-            const keyMap = { up:'ArrowUp', down:'ArrowDown', left:'ArrowLeft', right:'ArrowRight' };
-
-            btn.addEventListener('touchstart', e => {
-                e.preventDefault();
-                this.keys[keyMap[dir]] = true;
-                this.touchDir = dir;
-            }, {passive:false});
-
-            btn.addEventListener('touchend', e => {
-                e.preventDefault();
-                this.keys[keyMap[dir]] = false;
-                this.touchDir = null;
-            }, {passive:false});
-
-            btn.addEventListener('touchcancel', e => {
-                this.keys[keyMap[dir]] = false;
-                this.touchDir = null;
-            });
-
-            // Mouse fallback for desktop testing
-            btn.addEventListener('mousedown', e => {
-                e.preventDefault();
-                this.keys[keyMap[dir]] = true;
-            });
-            btn.addEventListener('mouseup', e => {
-                this.keys[keyMap[dir]] = false;
-            });
-            btn.addEventListener('mouseleave', e => {
-                this.keys[keyMap[dir]] = false;
-            });
-        });
-
-        // Action button
-        const actBtn = document.getElementById('touch-interact');
-        if (actBtn) {
-            actBtn.addEventListener('touchstart', e => {
-                e.preventDefault();
-                if (this.mode === 'explore') this.interact();
-                if (this.mode === 'dialog') this.advanceDialog();
-            }, {passive:false});
-            actBtn.addEventListener('click', e => {
-                if (this.mode === 'explore') this.interact();
-                if (this.mode === 'dialog') this.advanceDialog();
-            });
-        }
-
-        // Inventory button
-        const invBtn = document.getElementById('touch-inventory');
-        if (invBtn) {
-            invBtn.addEventListener('touchstart', e => {
-                e.preventDefault();
-                if (this.mode === 'explore') this.openInventory();
-            }, {passive:false});
-            invBtn.addEventListener('click', e => {
-                if (this.mode === 'explore') this.openInventory();
-            });
-        }
-    },
-
-    showTouchControls() {
-        const el = document.getElementById('touch-controls');
-        if (el) el.classList.remove('hidden');
-    },
-
-    hideTouchControls() {
-        const el = document.getElementById('touch-controls');
-        if (el) el.classList.add('hidden');
-    },
-
-    // ---- Overlays ----
-    showOverlay(id) { document.getElementById(id).classList.add('active'); },
-    hideOverlay(id) { document.getElementById(id).classList.remove('active'); },
-    hideAllOverlays() {
-        document.querySelectorAll('.overlay').forEach(o => o.classList.remove('active'));
-    },
-
-    // ---- Notifications ----
-    notify(msg, type='info', dur=3000) {
-        const c = document.getElementById('notif-container');
-        const n = document.createElement('div');
-        n.className = `notif ${type}`;
-        n.textContent = msg;
-        c.appendChild(n);
-        setTimeout(() => { n.classList.add('fade-out'); setTimeout(() => n.remove(), 300); }, dur);
-    },
-
-    // ---- Start New Game ----
-    startNewGame(name, charId) {
-        this.state = {...this.defaultState};
-        this.state.playerName = name || '\u0645\u062D\u0627\u0631\u0628';
-        this.state.characterId = charId;
-        this.saveState();
-    },
-
-    // ---- Enter Explore Mode ----
-    enterExplore() {
-        this.mode = 'explore';
-        this.hideAllOverlays();
-        const map = Maps.get(this.state.currentMap);
-        this.currentMap = this.state.currentMap;
-        this.player.x = this.state.playerX;
-        this.player.y = this.state.playerY;
-        this.player.dir = 'down';
-        this.player.frame = 0;
-        this._particlesInited = false; // Reset particles
-        // Copy enemies that haven't been defeated
-        this.mapEnemies = (map.enemies || []).filter(e => !this.state.completedEnemies.includes(e.id)).map(e => ({...e}));
-        // Show HUD and touch controls
-        document.getElementById('hud').classList.remove('hidden');
-        this.updateHUD();
-        document.getElementById('hud-location').textContent = map.name;
-        this.showTouchControls();
-        Sound.resume();
-        Sound.playMusic(map.music);
-    },
-
-    updateHUD() {
-        const s = this.state;
-        document.getElementById('hud-name').textContent = s.playerName;
-        document.getElementById('hud-level').textContent = '\u0645. ' + s.playerLevel;
-        document.getElementById('hud-gold').textContent = s.gold + ' \u0630\u0647\u0628';
-        document.getElementById('hud-keys').textContent = s.keys + ' \u0645\u0641\u062A\u0627\u062D';
-        document.getElementById('hud-xp').textContent = s.xp + ' \u062E\u0628\u0631\u0629';
-        const stats = this.getPlayerStats();
-        document.getElementById('hud-hp-fill').style.width = '100%';
-    },
-
-    getPlayerStats() {
-        const ch = this.characters.find(c => c.id === this.state.characterId) || this.characters[0];
-        const lv = this.state.playerLevel;
-        return { hp: ch.hp + (lv-1)*10, dmg: ch.dmg + (lv-1)*3, def: ch.def + Math.floor((lv-1)/2) };
-    },
-
-    // ---- GAME LOOP ----
-    loop(time) {
-        this.animFrame++;
-        if (this.mode === 'explore') {
-            this.updateExplore();
-            this.renderExplore();
-        }
-        requestAnimationFrame(t => this.loop(t));
-    },
-
-    // ---- EXPLORE UPDATE ----
-    updateExplore() {
-        if (this.player.moving) {
-            this.player.moveTimer--;
-            if (this.player.moveTimer <= 0) this.player.moving = false;
-            return;
-        }
-
-        let dx = 0, dy = 0;
-        if (this.keys['ArrowUp'] || this.keys['w'] || this.keys['W']) { dy = -1; this.player.dir = 'up'; }
-        else if (this.keys['ArrowDown'] || this.keys['s'] || this.keys['S']) { dy = 1; this.player.dir = 'down'; }
-        else if (this.keys['ArrowLeft'] || this.keys['a'] || this.keys['A']) { dx = -1; this.player.dir = 'left'; }
-        else if (this.keys['ArrowRight'] || this.keys['d'] || this.keys['D']) { dx = 1; this.player.dir = 'right'; }
-
-        if (dx === 0 && dy === 0) return;
-
-        const nx = this.player.x + dx;
-        const ny = this.player.y + dy;
-
-        // Check exit
-        const map = Maps.get(this.currentMap);
-        const exit = (map.exits || []).find(e => e.x === nx && e.y === ny);
-        if (exit) {
-            this.changeMap(exit.toMap, exit.toX, exit.toY);
-            Sound.doorOpen();
-            return;
-        }
-
-        // Check enemy collision
-        const enemy = this.mapEnemies.find(e => e.x === nx && e.y === ny);
-        if (enemy) {
-            this.startBattle(enemy);
-            return;
-        }
-
-        // Check NPC collision
-        const npc = (map.npcs || []).find(n => n.x === nx && n.y === ny);
-        if (npc) {
-            this.startDialog(npc);
-            return;
-        }
-
-        // Check walkable
-        if (!Maps.isWalkable(this.currentMap, nx, ny)) return;
-
-        // Move
-        this.player.x = nx;
-        this.player.y = ny;
-        this.player.frame++;
-        this.player.moving = true;
-        this.player.moveTimer = 6;
-        this.state.playerX = nx;
-        this.state.playerY = ny;
-
-        // Check if standing on chest
-        const tile = Maps.getTile(this.currentMap, nx, ny);
-        if (tile === 8) {
-            this.openChest(nx, ny);
-        }
-
-        if (this.animFrame % 3 === 0) Sound.walk();
-    },
-
-    changeMap(mapId, px, py) {
-        this.state.currentMap = mapId;
-        this.state.playerX = px;
-        this.state.playerY = py;
-        this.currentMap = mapId;
-        this.player.x = px;
-        this.player.y = py;
-        const map = Maps.get(mapId);
-        this.mapEnemies = (map.enemies || []).filter(e => !this.state.completedEnemies.includes(e.id)).map(e => ({...e}));
-        document.getElementById('hud-location').textContent = map.name;
-        Sound.playMusic(map.music);
-        this._particlesInited = false; // Reset particles for new map
-        this.saveState();
-    },
-
-    openChest(x, y) {
-        const chestKey = `${this.currentMap}_${x}_${y}`;
-        if (this.state.secretsFound.includes(chestKey)) return;
-        this.state.secretsFound.push(chestKey);
-        this.state.keys++;
-        this.state.gold += 50;
-        Sound.chest();
-        this.notify('\u0635\u0646\u062F\u0648\u0642 \u0643\u0646\u0632! +1 \u0645\u0641\u062A\u0627\u062D, +50 \u0630\u0647\u0628', 'secret', 4000);
-        this.checkAchievement('chest_finder');
-        this.updateHUD();
-        this.saveState();
-    },
-
-    // ---- Particle System ----
-    initParticles(map) {
-        this.particles = [];
-        const count = this.currentMap === 'forest' ? 25 : this.currentMap === 'cave' ? 15 : this.currentMap === 'castle' ? 10 : 18;
-        for (let i = 0; i < count; i++) {
-            this.particles.push(this._newParticle(map, true));
-        }
-        this._particlesInited = true;
-    },
-
-    _newParticle(map, randomY) {
-        const themes = {
-            village: { colors:['rgba(255,220,100,','rgba(200,255,200,'], size:[1.5,3], speed:[0.1,0.3], type:'float' },
-            forest: { colors:['rgba(100,255,150,','rgba(80,200,120,','rgba(200,255,100,'], size:[1.5,4], speed:[0.05,0.25], type:'firefly' },
-            cave: { colors:['rgba(100,180,255,','rgba(139,92,246,'], size:[1,2.5], speed:[0.15,0.4], type:'dust' },
-            castle: { colors:['rgba(255,80,80,','rgba(139,92,246,','rgba(255,100,50,'], size:[1,3], speed:[0.1,0.35], type:'ember' },
-        };
-        const t = themes[this.currentMap] || themes.village;
-        const mw = map.width * Sprites.T;
-        const mh = map.height * Sprites.T;
-        return {
-            x: Math.random() * mw,
-            y: randomY ? Math.random() * mh : -10,
-            vx: (Math.random() - 0.5) * t.speed[1],
-            vy: t.type === 'ember' ? -Math.random() * t.speed[1] : (Math.random() * t.speed[1] + t.speed[0]) * (t.type === 'dust' ? 1 : 0.5),
-            size: t.size[0] + Math.random() * (t.size[1] - t.size[0]),
-            color: t.colors[Math.floor(Math.random() * t.colors.length)],
-            alpha: 0.2 + Math.random() * 0.5,
-            phase: Math.random() * Math.PI * 2,
-            life: 200 + Math.random() * 400,
-            maxLife: 400,
-            type: t.type,
-            mw, mh,
-        };
-    },
-
-    updateParticles(map) {
-        const t = Date.now() / 1000;
-        for (let i = this.particles.length - 1; i >= 0; i--) {
-            const p = this.particles[i];
-            p.life--;
-            if (p.type === 'firefly') {
-                p.x += Math.sin(t * 2 + p.phase) * 0.4 + p.vx;
-                p.y += Math.cos(t * 1.5 + p.phase) * 0.3 + p.vy * 0.2;
-            } else if (p.type === 'ember') {
-                p.x += Math.sin(t + p.phase) * 0.3 + p.vx;
-                p.y += p.vy;
-            } else {
-                p.x += p.vx + Math.sin(t + p.phase) * 0.2;
-                p.y += p.vy;
-            }
-            if (p.life <= 0 || p.y > p.mh + 10 || p.y < -20 || p.x < -20 || p.x > p.mw + 20) {
-                this.particles[i] = this._newParticle(map, false);
-                this.particles[i].x = Math.random() * p.mw;
-                this.particles[i].y = p.type === 'ember' ? p.mh + 5 : -5;
-            }
-        }
-    },
-
-    drawParticles(ctx) {
-        this.particles.forEach(p => {
-            const fadeIn = Math.min(1, (p.maxLife - p.life) / 60);
-            const fadeOut = Math.min(1, p.life / 60);
-            const a = p.alpha * fadeIn * fadeOut;
-            ctx.fillStyle = p.color + a.toFixed(2) + ')';
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-            ctx.fill();
-            // Glow
-            if (p.type === 'firefly' || p.type === 'ember') {
-                ctx.fillStyle = p.color + (a * 0.15).toFixed(2) + ')';
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.size * 4, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        });
-    },
-
-    // ---- RENDER EXPLORE ----
-    renderExplore() {
-        const ctx = this.ctx;
-        const cw = this.canvas.width;
-        const ch = this.canvas.height;
-        const T = Sprites.T;
-        const map = Maps.get(this.currentMap);
-
-        // Init particles if needed
-        if (!this._particlesInited) this.initParticles(map);
-
-        // Camera follows player (smooth)
-        const targetCX = this.player.x * T - cw / 2 + T / 2;
-        const targetCY = this.player.y * T - ch / 2 + T / 2;
-        this.camera.x += (targetCX - this.camera.x) * 0.12;
-        this.camera.y += (targetCY - this.camera.y) * 0.12;
-
-        // Clamp camera
-        this.camera.x = Math.max(0, Math.min(map.width * T - cw, this.camera.x));
-        this.camera.y = Math.max(0, Math.min(map.height * T - ch, this.camera.y));
-
-        ctx.clearRect(0, 0, cw, ch);
-        ctx.fillStyle = '#080b14';
-        ctx.fillRect(0, 0, cw, ch);
-
-        // Calculate visible tiles
-        const startX = Math.max(0, Math.floor(this.camera.x / T) - 1);
-        const startY = Math.max(0, Math.floor(this.camera.y / T) - 1);
-        const endX = Math.min(map.width, Math.ceil((this.camera.x + cw) / T) + 1);
-        const endY = Math.min(map.height, Math.ceil((this.camera.y + ch) / T) + 1);
-
-        ctx.save();
-        ctx.translate(-this.camera.x, -this.camera.y);
-
-        // Draw tiles
-        for (let ty = startY; ty < endY; ty++) {
-            for (let tx = startX; tx < endX; tx++) {
-                const tile = map.tiles[ty][tx];
-                Sprites.drawTile(ctx, tx * T, ty * T, tile, this.animFrame);
-            }
-        }
-
-        // Draw exits (glowing portals)
-        (map.exits || []).forEach(e => {
-            const t = Date.now() / 400;
-            const pulse = Math.sin(t) * 0.3 + 0.7;
-            // Outer glow
-            const grd = ctx.createRadialGradient(e.x*T+T/2, e.y*T+T/2, 2, e.x*T+T/2, e.y*T+T/2, T);
-            grd.addColorStop(0, `rgba(139,92,246,${pulse * 0.5})`);
-            grd.addColorStop(1, 'rgba(139,92,246,0)');
-            ctx.fillStyle = grd;
-            ctx.fillRect(e.x*T-T/2, e.y*T-T/2, T*2, T*2);
-            // Core
-            ctx.fillStyle = `rgba(139,92,246,${pulse * 0.4})`;
-            ctx.beginPath();
-            ctx.arc(e.x*T+T/2, e.y*T+T/2, T/2.5, 0, Math.PI*2);
-            ctx.fill();
-            // Arrow
-            ctx.fillStyle = `rgba(200,180,255,${pulse})`;
-            ctx.font = 'bold 14px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(e.y === 0 ? '\u25B2' : '\u25BC', e.x*T+T/2, e.y*T+T/2+5);
-        });
-
-        // Draw NPCs with subtle glow
-        (map.npcs || []).forEach(npc => {
-            // NPC glow
-            const ga = 0.08 + Math.sin(Date.now()/600 + npc.x) * 0.04;
-            ctx.fillStyle = `rgba(6,182,212,${ga})`;
-            ctx.beginPath();
-            ctx.arc(npc.x*T+T/2, npc.y*T+T/2, T*0.8, 0, Math.PI*2);
-            ctx.fill();
-            Sprites.drawNPC(ctx, npc.x * T, npc.y * T, npc.type, npc.dir, Math.floor(this.animFrame / 30));
-        });
-
-        // Draw enemies with threat glow
-        this.mapEnemies.forEach(e => {
-            const ga = 0.1 + Math.sin(Date.now()/400 + e.x*3) * 0.06;
-            ctx.fillStyle = `rgba(239,68,68,${ga})`;
-            ctx.beginPath();
-            ctx.arc(e.x*T+T/2, e.y*T+T/2, T*0.9, 0, Math.PI*2);
-            ctx.fill();
-            Sprites.drawEnemy(ctx, e.x * T, e.y * T, e.type, this.animFrame);
-        });
-
-        // Draw player with subtle aura
-        const pa = 0.06 + Math.sin(Date.now()/500) * 0.03;
-        ctx.fillStyle = `rgba(139,92,246,${pa})`;
-        ctx.beginPath();
-        ctx.arc(this.player.x*T+T/2, this.player.y*T+T/2, T*0.7, 0, Math.PI*2);
-        ctx.fill();
-        Sprites.drawCharacter(ctx, this.player.x * T, this.player.y * T,
-            this.state.characterId, this.player.dir, this.player.frame);
-
-        // Draw particles
-        this.updateParticles(map);
-        this.drawParticles(ctx);
-
-        // Draw interaction hint
-        this.drawInteractionHint(ctx, T, map);
-
-        ctx.restore();
-
-        // Vignette overlay
-        this.drawVignette(ctx, cw, ch);
-    },
-
-    drawVignette(ctx, cw, ch) {
-        const g = ctx.createRadialGradient(cw/2, ch/2, cw*0.3, cw/2, ch/2, cw*0.8);
-        g.addColorStop(0, 'rgba(0,0,0,0)');
-        g.addColorStop(1, 'rgba(0,0,0,0.35)');
-        ctx.fillStyle = g;
-        ctx.fillRect(0, 0, cw, ch);
-    },
-
-    drawInteractionHint(ctx, T, map) {
-        const dirs = {up:{dx:0,dy:-1},down:{dx:0,dy:1},left:{dx:-1,dy:0},right:{dx:1,dy:0}};
-        const fd = dirs[this.player.dir];
-        if (!fd) return;
-        const fx = this.player.x + fd.dx;
-        const fy = this.player.y + fd.dy;
-
-        const npc = (map.npcs || []).find(n => n.x === fx && n.y === fy);
-        const enemy = this.mapEnemies.find(e => e.x === fx && e.y === fy);
-        if (npc || enemy) {
-            const pulse = Math.sin(Date.now() / 300) * 3;
-            const bobY = fy * T - 8 + pulse;
-            // Indicator background pill
-            const label = npc ? '\u062A\u062D\u062F\u062B' : '\u0642\u0627\u062A\u0644';
-            ctx.font = 'bold 11px sans-serif';
-            const tw = ctx.measureText(label).width;
-            ctx.fillStyle = npc ? 'rgba(6,182,212,0.25)' : 'rgba(239,68,68,0.25)';
-            const rx = fx*T+T/2-tw/2-6;
-            ctx.beginPath();
-            ctx.roundRect(rx, bobY-10, tw+12, 18, 6);
-            ctx.fill();
-            // Text
-            ctx.fillStyle = npc ? 'rgba(6,182,212,0.9)' : 'rgba(239,68,68,0.9)';
-            ctx.textAlign = 'center';
-            ctx.fillText(label, fx*T+T/2, bobY+3);
-        }
-    },
-
-    // ---- DIALOG ----
-    dialogQueue: [],
-    dialogNPC: null,
-    startDialog(npc) {
-        this.mode = 'dialog';
-        this.dialogNPC = npc;
-        this.dialogQueue = [...npc.dialog];
-        const box = document.getElementById('dialog-box');
-        box.classList.remove('hidden');
-        document.getElementById('dialog-name').textContent = this.npcLabels[npc.type] || npc.type;
-        document.getElementById('dialog-text').textContent = this.dialogQueue.shift();
-        Sound.npcTalk();
-    },
-
-    advanceDialog() {
-        if (this.dialogQueue.length > 0) {
-            document.getElementById('dialog-text').textContent = this.dialogQueue.shift();
-            Sound.npcTalk();
-        } else {
-            document.getElementById('dialog-box').classList.add('hidden');
-            if (this.dialogNPC && this.dialogNPC.action === 'shop') {
-                this.openShop();
-            } else {
-                this.mode = 'explore';
-            }
-            this.dialogNPC = null;
-        }
     },
 
     interact() {
-        const dirs = {up:{dx:0,dy:-1},down:{dx:0,dy:1},left:{dx:-1,dy:0},right:{dx:1,dy:0}};
-        const d = dirs[this.player.dir];
-        const tx = this.player.x + d.dx;
-        const ty = this.player.y + d.dy;
-        const map = Maps.get(this.currentMap);
-
-        const npc = (map.npcs || []).find(n => n.x === tx && n.y === ty);
-        if (npc) { this.startDialog(npc); return; }
-
-        // Check enemy facing (action button triggers battle too)
-        const enemy = this.mapEnemies.find(e => e.x === tx && e.y === ty);
-        if (enemy) { this.startBattle(enemy); return; }
-
-        const tile = Maps.getTile(this.currentMap, tx, ty);
-        if (tile === 17) {
-            const signs = {
-                village: '\u0633\u0627\u062D\u0629 \u0627\u0644\u0642\u0631\u064A\u0629 - \u0627\u0644\u063A\u0627\u0628\u0629 \u0641\u064A \u0627\u0644\u062C\u0646\u0648\u0628',
-                forest: '\u0627\u0644\u063A\u0627\u0628\u0629 \u0627\u0644\u0639\u0645\u064A\u0642\u0629 - \u0627\u062D\u0630\u0631 \u0645\u0646 \u0627\u0644\u0648\u062D\u0648\u0634! \u0645\u062F\u062E\u0644 \u0627\u0644\u0643\u0647\u0641 \u0642\u0631\u064A\u0628.',
-                cave: '\u0643\u0647\u0648\u0641 \u0627\u0644\u062C\u0628\u0631 - \u0627\u0644\u0642\u0644\u0639\u0629 \u0641\u064A \u0627\u0644\u0623\u0645\u0627\u0645.',
-                castle: '\u0627\u0644\u0642\u0644\u0639\u0629 \u0627\u0644\u0645\u0638\u0644\u0645\u0629 - \u0633\u064A\u062F \u0627\u0644\u0638\u0644\u0627\u0645 \u064A\u0646\u062A\u0638\u0631.'
-            };
-            this.startDialog({ type:'Sign', dialog:[signs[this.currentMap] || '\u0644\u0648\u062D\u0629 \u0642\u062F\u064A\u0645\u0629.'], x:tx, y:ty });
+        const nearby = Engine3D.checkProximity();
+        if (!nearby) return;
+        switch (nearby.type) {
+            case 'enemy': this.startBattle(nearby.data); break;
+            case 'npc': this.startDialog(nearby.data); break;
+            case 'chest': this.openChest(nearby.data); break;
+            case 'shop': this.openShop(); break;
         }
     },
 
-    // ---- BATTLE ----
-    startBattle(enemyObj) {
-        this.mode = 'battle';
-        this.hideTouchControls();
-        Sound.stopMusic();
-        Sound.playMusic(enemyObj.isBoss ? 'boss' : 'battle');
+    switchWeapon(id) {
+        if (!this.state) return;
+        if (this.state.unlockedWeapons.includes(id)) {
+            this.state.currentWeapon = id;
+            this.updateWeaponSlots();
+            Engine3D.updateWeaponVisual();
+            const weapon = World.getWeapon(id);
+            if (weapon) this.notify(weapon.icon + ' ' + weapon.name, 'info');
+            Sound.play('select');
+        } else {
+            this.notify('هذا السلاح مقفل!', 'warning');
+        }
+    },
 
-        const stats = this.getPlayerStats();
+    startDialog(npc) {
+        this.mode = 'dialog';
+        this.dialogQueue = [...npc.dialog];
+        this.dialogCallback = null;
+        if (document.pointerLockElement) document.exitPointerLock();
+        const box = document.getElementById('dialog-box');
+        box.classList.remove('hidden');
+        document.getElementById('dialog-name').textContent = npc.name;
+        document.getElementById('dialog-portrait').textContent = npc.emoji || '👤';
+        this.advanceDialog();
+        Sound.play('dialog');
+    },
+
+    advanceDialog() {
+        if (this.dialogQueue.length === 0) {
+            document.getElementById('dialog-box').classList.add('hidden');
+            this.mode = 'explore';
+            if (this.dialogCallback) this.dialogCallback();
+            return;
+        }
+        document.getElementById('dialog-text').textContent = this.dialogQueue.shift();
+        Sound.play('click');
+    },
+
+    openChest(chest) {
+        if (!this.state) return;
+        if (this.state.openedChests.includes(chest.id)) return;
+        this.state.openedChests.push(chest.id);
+        this.state.gold += chest.gold;
+        if (chest.item) this.state.inventory[chest.item] = (this.state.inventory[chest.item] || 0) + 1;
+        Engine3D.removeChest(chest.id);
+        this.saveState();
+        this.updateHUD();
+        this.notify('صندوق كنز! +' + chest.gold + ' ذهب', 'success');
+        if (chest.item) {
+            const itemData = World.shopItems.find(i => i.id === chest.item);
+            if (itemData) this.notify('حصلت على: ' + itemData.name, 'success');
+        }
+        Sound.play('chest');
+    },
+
+    openShop() {
+        this.mode = 'menu';
+        if (document.pointerLockElement) document.exitPointerLock();
+        this.showScreen('screen-shop');
+        document.getElementById('shop-gold').textContent = '🪙 ' + this.state.gold;
+        this.renderShop('items');
+        Sound.play('shop');
+    },
+
+    renderShop(tab) {
+        const grid = document.getElementById('shop-grid');
+        grid.innerHTML = '';
+        const items = World.shopItems.filter(i => i.tab === (tab || 'items'));
+        items.forEach(item => {
+            const owned = this.state.inventory[item.id] || 0;
+            const canBuy = this.state.gold >= item.price && owned < item.max;
+            if (item.effect.type === 'weapon_upgrade' && !this.state.unlockedWeapons.includes(item.effect.weapon)) return;
+            const div = document.createElement('div');
+            div.className = 'shop-item' + (owned >= item.max ? ' owned' : '');
+            div.innerHTML = '<div class="shop-item-icon">' + item.icon + '</div><div class="shop-item-name">' + item.name + '</div><div class="shop-item-desc">' + item.desc + '</div><div class="shop-item-price">🪙 ' + item.price + (owned > 0 ? ' (' + owned + '/' + item.max + ')' : '') + '</div>';
+            if (canBuy) div.addEventListener('click', () => { this.buyItem(item); this.renderShop(tab); });
+            grid.appendChild(div);
+        });
+    },
+
+    buyItem(item) {
+        if (this.state.gold < item.price) { this.notify('لا يوجد ذهب كافٍ!', 'error'); return; }
+        const owned = this.state.inventory[item.id] || 0;
+        if (owned >= item.max) { this.notify('وصلت الحد الأقصى!', 'warning'); return; }
+        this.state.gold -= item.price;
+        switch (item.effect.type) {
+            case 'weapon_upgrade':
+                this.state.weaponDamage[item.effect.weapon] += item.effect.value;
+                this.state.inventory[item.id] = (this.state.inventory[item.id] || 0) + 1;
+                break;
+            case 'hp_upgrade':
+                this.state.maxHp += item.effect.value;
+                this.state.currentHp += item.effect.value;
+                this.state.inventory[item.id] = (this.state.inventory[item.id] || 0) + 1;
+                break;
+            default:
+                this.state.inventory[item.id] = (this.state.inventory[item.id] || 0) + 1;
+        }
+        this.saveState();
+        this.updateHUD();
+        document.getElementById('shop-gold').textContent = '🪙 ' + this.state.gold;
+        this.notify('تم شراء ' + item.name + '!', 'success');
+        Sound.play('buy');
+    },
+
+    startBattle(enemy) {
+        this.mode = 'battle';
         this.battle = {
-            enemy: enemyObj,
-            playerHp: stats.hp, playerMaxHp: stats.hp,
-            playerDmg: stats.dmg, playerDef: stats.def,
-            enemyHp: enemyObj.enemyData.hp, enemyMaxHp: enemyObj.enemyData.hp,
-            enemyDmg: enemyObj.enemyData.damage, enemyDef: enemyObj.enemyData.defense,
-            combo: 0, bestCombo: 0, correct: 0, total: 0,
-            wrongAnswers: [], specialCharge: 0, specialMax: 5,
-            shieldActive: false, powerMult: 1, keysEarned: 0,
-            speedAnswers: 0, currentProblem: null, active: true,
+            enemy: { ...enemy },
+            enemyHp: enemy.hp,
+            enemyMaxHp: enemy.hp,
+            playerHp: this.state.currentHp,
+            playerMaxHp: this.state.maxHp,
+            combo: 0,
+            questionsAnswered: 0,
+            correctAnswers: 0,
+            startTime: Date.now(),
+            currentQuestion: null,
+            shieldActive: false,
+            powerActive: false,
         };
         this.selectedAnswer = null;
-
+        if (document.pointerLockElement) document.exitPointerLock();
+        this.showScreen('screen-battle');
         document.getElementById('bf-player-name').textContent = this.state.playerName;
-        document.getElementById('bf-enemy-name').textContent = enemyObj.enemyData.name;
-        this.updateBattleUI();
-        this.showOverlay('screen-battle');
-        setTimeout(() => this.nextQuestion(), 500);
-    },
-
-    updateBattleUI() {
-        const b = this.battle;
-        document.getElementById('bf-player-hp').style.width = Math.max(0, b.playerHp / b.playerMaxHp * 100) + '%';
-        document.getElementById('bf-player-hp-text').textContent = `${Math.max(0,Math.round(b.playerHp))}/${b.playerMaxHp}`;
-        document.getElementById('bf-enemy-hp').style.width = Math.max(0, b.enemyHp / b.enemyMaxHp * 100) + '%';
-        document.getElementById('bf-enemy-hp-text').textContent = `${Math.max(0,Math.round(b.enemyHp))}/${b.enemyMaxHp}`;
-        document.getElementById('bf-special-fill').style.width = Math.min(100, b.specialCharge / b.specialMax * 100) + '%';
-        if (b.combo > 1) {
-            document.getElementById('battle-combo').style.display = 'block';
-            document.getElementById('combo-num').textContent = b.combo;
-        } else {
-            document.getElementById('battle-combo').style.display = 'none';
-        }
+        document.getElementById('bf-enemy-name').textContent = enemy.name;
+        document.getElementById('bf-enemy-level').textContent = 'م.' + enemy.level;
+        const weapon = World.getWeapon(this.state.currentWeapon);
+        document.getElementById('bf-player-weapon').textContent = weapon ? weapon.icon + ' ' + weapon.name : '📐 رياضيات';
+        this.updateBattleHP();
+        this.nextQuestion();
+        Sound.play('battleStart');
+        const char = World.characters.find(c => c.id === this.state.characterId);
+        Engine3D.renderBattle(char, enemy, 1, 1);
     },
 
     nextQuestion() {
-        const b = this.battle;
-        if (!b || !b.active) return;
-        if (b.enemyHp <= 0) { this.battleVictory(); return; }
-        if (b.playerHp <= 0) { this.battleDefeat(); return; }
-
-        const isBonus = Math.random() < 0.12;
-        const prob = isBonus
-            ? MathEngine.generateBonusProblem(b.enemy.topics)
-            : MathEngine.generateProblem(b.enemy.topics, b.enemy.difficulty);
-        b.currentProblem = prob;
-        b.total++;
+        if (!this.battle) return;
+        const weapon = World.getWeapon(this.state.currentWeapon);
+        const subject = weapon ? weapon.subject : 'math';
+        const region = World.getRegion(this.state.currentRegion);
+        const difficulty = region ? region.difficulty : 'easy';
+        const grade = this.state.grade;
+        const question = Questions.generateForBattle(subject, difficulty, grade);
+        this.battle.currentQuestion = question;
         this.selectedAnswer = null;
-
-        document.getElementById('bq-category').textContent = this.getCatLabel(prob);
-        document.getElementById('bq-text').textContent = prob.question;
+        document.getElementById('bq-text').textContent = question.question;
+        document.getElementById('bq-category').textContent = question.category || subject;
+        document.getElementById('bq-difficulty').textContent = difficulty === 'easy' ? 'سهل' : difficulty === 'medium' ? 'متوسط' : 'صعب';
+        const catEl = document.getElementById('bq-category');
+        catEl.style.background = weapon ? weapon.color : '#4ecdc4';
         document.getElementById('bq-hint').style.display = 'none';
-        const answersDiv = document.getElementById('bq-answers');
-        answersDiv.innerHTML = '';
-        prob.options.forEach(opt => {
-            const btn = document.createElement('button');
-            btn.className = 'answer-btn';
-            btn.textContent = opt;
-            btn.onclick = () => {
-                answersDiv.querySelectorAll('.answer-btn').forEach(b => b.classList.remove('selected'));
-                btn.classList.add('selected');
-                this.selectedAnswer = String(opt);
-                document.getElementById('btn-submit').disabled = false;
-            };
-            answersDiv.appendChild(btn);
-        });
+        document.getElementById('bq-explanation').style.display = 'none';
         document.getElementById('btn-submit').disabled = true;
+        if (this.battle.combo >= 2) {
+            document.getElementById('battle-combo').style.display = 'block';
+            document.getElementById('combo-num').textContent = this.battle.combo;
+        } else {
+            document.getElementById('battle-combo').style.display = 'none';
+        }
+        const answersEl = document.getElementById('bq-answers');
+        answersEl.innerHTML = '';
+        question.options.forEach((opt, i) => {
+            const btn = document.createElement('button');
+            btn.className = 'bq-answer';
+            btn.textContent = opt;
+            btn.dataset.index = i;
+            btn.addEventListener('click', () => this.selectBattleAnswer(i));
+            answersEl.appendChild(btn);
+        });
+        this.battleTimeLeft = 30;
+        document.getElementById('bq-timer').textContent = this.battleTimeLeft;
+        if (this.battleTimer) clearInterval(this.battleTimer);
+        this.battleTimer = setInterval(() => {
+            this.battleTimeLeft--;
+            document.getElementById('bq-timer').textContent = this.battleTimeLeft;
+            if (this.battleTimeLeft <= 0) { clearInterval(this.battleTimer); this.handleWrongAnswer(); }
+        }, 1000);
+    },
 
-        const hintBtn = document.getElementById('btn-hint');
-        hintBtn.style.display = (this.state.inventory.hint_scroll || 0) > 0 ? 'inline-block' : 'none';
-
-        const limit = b.enemy.difficulty === 'hard' ? 25 : b.enemy.difficulty === 'medium' ? 30 : 35;
-        this.startTimer(limit, () => this.processAnswer(false));
-
-        if (isBonus) this.notify('\u0633\u0624\u0627\u0644 \u0625\u0636\u0627\u0641\u064A! \u062D\u0644\u0647 \u0644\u0644\u062D\u0635\u0648\u0644 \u0639\u0644\u0649 \u0645\u0641\u062A\u0627\u062D!', 'secret', 2000);
+    selectBattleAnswer(index) {
+        if (!this.battle || !this.battle.currentQuestion) return;
+        this.selectedAnswer = index;
+        document.querySelectorAll('.bq-answer').forEach((btn, i) => btn.classList.toggle('selected', i === index));
+        document.getElementById('btn-submit').disabled = false;
     },
 
     submitAnswer() {
-        if (!this.battle || !this.battle.active || this.selectedAnswer === null) return;
-        this.stopTimer();
-        const elapsed = (Date.now() - this._timerStart) / 1000;
-        const correct = String(this.selectedAnswer).trim() === String(this.battle.currentProblem.correctAnswer).trim();
-        this.processAnswer(correct, elapsed);
+        if (this.selectedAnswer === null || !this.battle || !this.battle.currentQuestion) return;
+        clearInterval(this.battleTimer);
+        const question = this.battle.currentQuestion;
+        const selected = question.options[this.selectedAnswer];
+        const isCorrect = selected === question.correctAnswer;
+        this.battle.questionsAnswered++;
+        this.state.totalQuestions++;
+        document.querySelectorAll('.bq-answer').forEach((btn, i) => {
+            if (question.options[i] === question.correctAnswer) btn.classList.add('correct');
+            else if (i === this.selectedAnswer && !isCorrect) btn.classList.add('wrong');
+            btn.style.pointerEvents = 'none';
+        });
+        if (isCorrect) this.handleCorrectAnswer();
+        else this.handleWrongAnswer();
+        if (question.explanation) {
+            const expEl = document.getElementById('bq-explanation');
+            expEl.textContent = question.explanation;
+            expEl.style.display = 'block';
+        }
     },
 
-    processAnswer(correct, elapsed = 999) {
-        const b = this.battle;
-        const prob = b.currentProblem;
-        const btns = document.querySelectorAll('.answer-btn');
+    handleCorrectAnswer() {
+        this.battle.combo++;
+        this.battle.correctAnswers++;
+        this.state.totalCorrect++;
+        let damage = this.state.weaponDamage[this.state.currentWeapon] || 25;
+        if (this.battle.combo >= 2) damage = Math.round(damage * (1 + this.battle.combo * 0.2));
+        if (this.battle.powerActive) { damage *= 2; this.battle.powerActive = false; }
+        this.battle.enemyHp = Math.max(0, this.battle.enemyHp - damage);
+        this.showBattleMsg('✓ صحيح! -' + damage + ' ضرر', '#06d6a0');
+        Sound.play('correct');
+        this.updateBattleHP();
+        const char = World.characters.find(c => c.id === this.state.characterId);
+        Engine3D.renderBattle(char, this.battle.enemy, this.battle.playerHp / this.battle.playerMaxHp, this.battle.enemyHp / this.battle.enemyMaxHp);
+        if (this.battle.enemyHp <= 0) setTimeout(() => this.handleVictory(), 1500);
+        else setTimeout(() => this.nextQuestion(), 2000);
+    },
 
-        btns.forEach(btn => {
-            btn.onclick = null;
-            if (String(btn.textContent) === String(prob.correctAnswer)) btn.classList.add('correct');
-            if (btn.classList.contains('selected') && !correct) btn.classList.add('wrong');
-        });
+    handleWrongAnswer() {
+        this.battle.combo = 0;
+        let enemyDmg = this.battle.enemy.dmg;
+        if (this.battle.shieldActive) {
+            enemyDmg = 0;
+            this.battle.shieldActive = false;
+            this.showBattleMsg('🛡️ الدرع صد الهجوم!', '#ffd166');
+        } else {
+            this.battle.playerHp = Math.max(0, this.battle.playerHp - enemyDmg);
+            this.showBattleMsg('✗ خطأ! -' + enemyDmg + ' ضرر عليك', '#ef476f');
+        }
+        Sound.play('wrong');
+        this.updateBattleHP();
+        const char = World.characters.find(c => c.id === this.state.characterId);
+        Engine3D.renderBattle(char, this.battle.enemy, this.battle.playerHp / this.battle.playerMaxHp, this.battle.enemyHp / this.battle.enemyMaxHp);
+        if (this.battle.playerHp <= 0) setTimeout(() => this.handleDefeat(), 1500);
+        else setTimeout(() => this.nextQuestion(), 2000);
+    },
 
-        if (correct) {
-            b.correct++;
-            b.combo++;
-            if (b.combo > b.bestCombo) b.bestCombo = b.combo;
-            b.specialCharge = Math.min(b.specialMax, b.specialCharge + 1);
-
-            let dmg = b.playerDmg + b.combo * 3;
-            const speed = elapsed < 5;
-            if (speed) { dmg = Math.floor(dmg * 1.3); b.speedAnswers++; }
-            dmg = Math.floor(dmg * b.powerMult);
-            b.powerMult = 1;
-            dmg = Math.max(5, dmg - b.enemyDef);
-            const crit = Math.random() < (0.1 + b.combo * 0.03);
-            if (crit) dmg = Math.floor(dmg * 1.8);
-
-            b.enemyHp -= dmg;
-            Sound.attack();
-            if (b.combo >= 3) Sound.combo();
-            this.showBattleMsg(crit ? `\u0636\u0631\u0628\u0629 \u062D\u0631\u062C\u0629! -${dmg}` : `-${dmg} \u0635\u062D\u0629`, 'green');
-            this.shakeScreen();
-
-            if (prob.isBonus) {
-                b.keysEarned++;
-                this.state.keys++;
-                this.notify('\u062D\u0635\u0644\u062A \u0639\u0644\u0649 \u0645\u0641\u062A\u0627\u062D!', 'secret');
+    handleVictory() {
+        const enemy = this.battle.enemy;
+        if (!this.state.completedEnemies.includes(enemy.id)) this.state.completedEnemies.push(enemy.id);
+        const goldReward = enemy.gold;
+        const xpReward = enemy.xp;
+        this.state.gold += goldReward;
+        this.addXP(xpReward);
+        this.state.currentHp = this.battle.playerHp;
+        const accuracy = this.battle.correctAnswers / Math.max(1, this.battle.questionsAnswered);
+        let stars = 1;
+        if (accuracy >= 0.8) stars = 2;
+        if (accuracy >= 0.95) stars = 3;
+        this.state.stars += stars;
+        Engine3D.removeEnemy(enemy.id);
+        this.showScreen('screen-victory');
+        document.getElementById('victory-title').textContent = enemy.isBoss ? 'انتصار عظيم!' : 'انتصار!';
+        document.getElementById('victory-stars').textContent = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
+        document.getElementById('victory-stats').innerHTML = '<div class="victory-stat"><div class="victory-stat-label">الإجابات الصحيحة</div><div class="victory-stat-value">' + this.battle.correctAnswers + '/' + this.battle.questionsAnswered + '</div></div><div class="victory-stat"><div class="victory-stat-label">أعلى كومبو</div><div class="victory-stat-value">' + this.battle.combo + 'x</div></div><div class="victory-stat"><div class="victory-stat-label">الذهب المكتسب</div><div class="victory-stat-value">🪙 ' + goldReward + '</div></div><div class="victory-stat"><div class="victory-stat-label">الخبرة المكتسبة</div><div class="victory-stat-value">⭐ ' + xpReward + ' XP</div></div>';
+        document.getElementById('victory-rewards').innerHTML = '<p>+' + goldReward + ' ذهب | +' + xpReward + ' خبرة | +' + stars + ' نجمة</p>';
+        if (enemy.isBoss && enemy.unlocks) {
+            if (!this.state.bossesDefeated.includes(enemy.id)) this.state.bossesDefeated.push(enemy.id);
+            if (enemy.unlocks === 'victory') {
+                const unlockEl = document.getElementById('victory-unlock');
+                unlockEl.style.display = 'block';
+                unlockEl.innerHTML = '<h3>🎉 تهانينا! أتممت اللعبة!</h3><p>لقد هزمت سيد الجهل وحررت مملكة العلوم!</p>';
+            } else {
+                if (!this.state.unlockedRegions.includes(enemy.unlocks)) {
+                    this.state.unlockedRegions.push(enemy.unlocks);
+                    const nextRegion = World.getRegion(enemy.unlocks);
+                    if (nextRegion) {
+                        const unlockEl = document.getElementById('victory-unlock');
+                        unlockEl.style.display = 'block';
+                        unlockEl.innerHTML = '<h3>🗺️ تم فتح منطقة جديدة!</h3><p>' + nextRegion.name + ': ' + nextRegion.desc + '</p>';
+                        setTimeout(() => this.showRegionUnlock(nextRegion.name), 500);
+                    }
+                }
             }
-
-            setTimeout(() => {
-                this.updateBattleUI();
-                setTimeout(() => this.nextQuestion(), 800);
-            }, 600);
-        } else {
-            b.combo = 0;
-            b.wrongAnswers.push({ question: prob.question, correctAnswer: prob.correctAnswer });
-            let eDmg = b.shieldActive ? 0 : Math.max(3, b.enemyDmg - b.playerDef);
-            if (b.shieldActive) { b.shieldActive = false; this.showBattleMsg('\u0627\u0644\u062F\u0631\u0639 \u0627\u0645\u062A\u0635 \u0627\u0644\u0636\u0631\u0628\u0629!', 'cyan'); }
-            else { this.showBattleMsg(`\u0627\u0644\u0639\u062F\u0648 \u0636\u0631\u0628\u0643! -${eDmg}`, 'red'); }
-            b.playerHp -= eDmg;
-            Sound.hit();
-            this.shakeScreen();
-
-            setTimeout(() => {
-                this.showBattleMsg(`\u0627\u0644\u062C\u0648\u0627\u0628: ${prob.correctAnswer}`, 'white');
-                this.updateBattleUI();
-                setTimeout(() => this.nextQuestion(), 1500);
-            }, 800);
         }
-    },
-
-    battleVictory() {
-        this.battle.active = false;
-        this.stopTimer();
-        Sound.stopMusic();
-        Sound.victory();
-        this.hideOverlay('screen-battle');
-
-        const b = this.battle;
-        const acc = b.correct / Math.max(1, b.total);
-        const stars = acc >= 0.9 ? 3 : acc >= 0.7 ? 2 : 1;
-        let gold = 30 + b.correct * 5;
-        let xp = b.correct * 20 + b.bestCombo * 5;
-        if (b.enemy.isBoss) { gold *= 3; xp *= 2; }
-        if (acc === 1) gold += 50;
-
-        this.state.gold += gold;
-        this.state.xp += xp;
-        this.state.totalCorrect += b.correct;
-        this.state.totalQuestions += b.total;
-        this.state.speedAnswers += b.speedAnswers;
-        this.state.completedEnemies.push(b.enemy.id);
-        if (b.enemy.isBoss) this.state.bossesDefeated.push(b.enemy.id);
-        this.mapEnemies = this.mapEnemies.filter(e => e.id !== b.enemy.id);
-
-        const oldLv = this.state.playerLevel;
-        this.checkLevelUp();
-        const leveled = this.state.playerLevel > oldLv;
-        this.checkAllAchievements();
         this.saveState();
-
-        document.getElementById('victory-title').textContent = b.enemy.isBoss ? '\u062A\u0645 \u0647\u0632\u064A\u0645\u0629 \u0627\u0644\u0632\u0639\u064A\u0645!' : '\u0627\u0646\u062A\u0635\u0627\u0631!';
-        document.getElementById('victory-stars').innerHTML = [1,2,3].map(s =>
-            `<span class="${s<=stars?'star-on':'star-off'}">\u2605</span>`).join('');
-        document.getElementById('victory-stats').innerHTML = `
-            <div class="vs-item"><span class="vs-label">\u0635\u062D\u064A\u062D</span><span class="vs-val">${b.correct}/${b.total}</span></div>
-            <div class="vs-item"><span class="vs-label">\u0623\u0641\u0636\u0644 \u0643\u0648\u0645\u0628\u0648</span><span class="vs-val">${b.bestCombo}x</span></div>
-            <div class="vs-item"><span class="vs-label">\u0630\u0647\u0628</span><span class="vs-val gold-val">+${gold}</span></div>
-            <div class="vs-item"><span class="vs-label">\u062E\u0628\u0631\u0629</span><span class="vs-val xp-val">+${xp}</span></div>`;
-        document.getElementById('victory-rewards').innerHTML = `<h4>\u0627\u0644\u0645\u0643\u0627\u0641\u0622\u062A</h4>
-            <div>+${gold} \u0630\u0647\u0628, +${xp} \u062E\u0628\u0631\u0629${b.keysEarned?' ,+'+b.keysEarned+' \u0645\u0641\u062A\u0627\u062D':''}</div>
-            ${acc===1?'<div>\u0645\u0643\u0627\u0641\u0623\u0629 \u0627\u0644\u0645\u0639\u0631\u0643\u0629 \u0627\u0644\u0645\u062B\u0627\u0644\u064A\u0629!</div>':''}`;
-
-        if (b.enemy.isFinalBoss) {
-            document.getElementById('victory-secret').style.display = 'block';
-            document.getElementById('victory-secret').innerHTML = '<h4>\u062A\u0647\u0627\u0646\u064A\u0646\u0627!</h4><p>\u0644\u0642\u062F \u0647\u0632\u0645\u062A \u0633\u064A\u062F \u0627\u0644\u0638\u0644\u0627\u0645 \u0648\u0623\u0646\u0642\u0630\u062A \u0627\u0644\u0645\u0645\u0644\u0643\u0629 \u0628\u0642\u0648\u0629 \u0627\u0644\u0631\u064A\u0627\u0636\u064A\u0627\u062A!</p>';
-        } else {
-            document.getElementById('victory-secret').style.display = 'none';
-        }
-
-        this.showOverlay('screen-victory');
-        if (leveled) this.showLevelUp(this.state.playerLevel);
+        Sound.play('victory');
+        this.battle = null;
     },
 
-    battleDefeat() {
-        this.battle.active = false;
-        this.stopTimer();
-        Sound.stopMusic();
-        Sound.defeat();
-        this.hideOverlay('screen-battle');
-
-        const b = this.battle;
-        this.state.xp += b.correct * 5;
-        this.state.totalCorrect += b.correct;
-        this.state.totalQuestions += b.total;
+    handleDefeat() {
+        this.state.currentHp = Math.max(30, Math.round(this.state.maxHp * 0.3));
         this.saveState();
-
-        let html = '';
-        b.wrongAnswers.forEach(w => {
-            html += `<div class="review-item"><div class="review-q">${w.question}</div><div class="review-a">\u0627\u0644\u062C\u0648\u0627\u0628: ${w.correctAnswer}</div></div>`;
-        });
-        document.getElementById('defeat-review').innerHTML = html || '<p style="color:var(--muted)">\u0646\u0641\u062F\u062A \u0635\u062D\u062A\u0643!</p>';
-        this.showOverlay('screen-defeat');
-    },
-
-    // ---- Timer ----
-    startTimer(seconds, onExpire) {
-        this.stopTimer();
-        let rem = seconds;
-        const el = document.getElementById('bq-timer');
-        el.textContent = rem;
-        el.classList.remove('urgent');
-        this._timerStart = Date.now();
-        this._timer = setInterval(() => {
-            rem--;
-            el.textContent = rem;
-            if (rem <= 5) el.classList.add('urgent');
-            if (rem <= 0) { this.stopTimer(); onExpire(); }
-        }, 1000);
-    },
-    stopTimer() { if (this._timer) { clearInterval(this._timer); this._timer = null; } },
-
-    // ---- Battle helpers ----
-    showBattleMsg(text, color) {
-        const el = document.getElementById('battle-msg');
-        el.textContent = text;
-        el.style.display = 'block';
-        const c = color === 'green' ? '#10b981' : color === 'red' ? '#ef4444' : color === 'cyan' ? '#06b6d4' : '#e8ecf4';
-        el.style.color = c;
-        setTimeout(() => { el.style.display = 'none'; }, 1200);
-        // Floating damage number
-        this.showFloatingDmg(text, c);
-    },
-
-    showFloatingDmg(text, color) {
-        const el = document.createElement('div');
-        el.className = 'float-dmg';
-        el.textContent = text;
-        el.style.color = color;
-        el.style.fontSize = text.length > 12 ? '1rem' : '1.4rem';
-        el.style.left = (30 + Math.random() * 40) + '%';
-        el.style.top = '35%';
-        document.body.appendChild(el);
-        setTimeout(() => el.remove(), 1200);
-    },
-
-    shakeScreen() {
-        this.canvas.classList.add('shake');
-        setTimeout(() => this.canvas.classList.remove('shake'), 300);
+        this.showScreen('screen-defeat');
+        document.getElementById('defeat-review').innerHTML = '<p>راجع الأسئلة وحاول مرة أخرى</p>';
+        Sound.play('defeat');
     },
 
     useHint() {
-        if (!this.battle || !this.battle.currentProblem) return;
-        if ((this.state.inventory.hint_scroll || 0) <= 0) return;
-        this.state.inventory.hint_scroll--;
-        document.getElementById('bq-hint').textContent = this.battle.currentProblem.hint;
-        document.getElementById('bq-hint').style.display = 'block';
+        if (!this.battle || !this.battle.currentQuestion) return;
+        const hintCount = this.state.inventory['hint_scroll'] || 0;
+        if (hintCount <= 0) { this.notify('لا توجد لفافات تلميح!', 'warning'); return; }
+        this.state.inventory['hint_scroll']--;
         this.saveState();
+        const hint = this.battle.currentQuestion.hint;
+        if (hint) {
+            document.getElementById('bq-hint').textContent = '💡 ' + hint;
+            document.getElementById('bq-hint').style.display = 'block';
+        }
+        Sound.play('hint');
     },
 
-    getCatLabel(p) {
-        const q = p.question.toLowerCase();
-        if (q.includes('fraction') || q.includes('\u0643\u0633\u0631') || (q.includes('/') && !q.includes('solve') && !q.includes('\u062D\u0644'))) return '\u0643\u0633\u0648\u0631';
-        if (q.includes('percent') || q.includes('%')) return '\u0646\u0633\u0628 \u0645\u0626\u0648\u064A\u0629';
-        if (q.includes('solve') || q.includes('\u062D\u0644') || q.includes('\u0623\u0648\u062C\u062F x')) return '\u062C\u0628\u0631';
-        if (q.includes('area') || q.includes('perimeter') || q.includes('\u0645\u0633\u0627\u062D\u0629') || q.includes('\u0645\u062D\u064A\u0637')) return '\u0647\u0646\u062F\u0633\u0629';
-        if (q.includes('angle') || q.includes('\u0632\u0627\u0648\u064A\u0629')) return '\u0632\u0648\u0627\u064A\u0627';
-        if (q.includes('triangle') || q.includes('hypotenuse') || q.includes('\u0645\u062B\u0644\u062B') || q.includes('\u0648\u062A\u0631')) return '\u0641\u064A\u062B\u0627\u063A\u0648\u0631\u0633';
-        if (q.includes('mean') || q.includes('median') || q.includes('mode') || q.includes('\u0645\u062A\u0648\u0633\u0637') || q.includes('\u0648\u0633\u064A\u0637')) return '\u0625\u062D\u0635\u0627\u0621';
-        if (q.includes('probability') || q.includes('\u0627\u062D\u062A\u0645\u0627\u0644') || q.includes('\u0646\u0631\u062F') || q.includes('\u0639\u0645\u0644\u0629')) return '\u0627\u062D\u062A\u0645\u0627\u0644\u0627\u062A';
-        if (q.includes('\u221A') || q.includes('\u00B2') || q.includes('\u062C\u0630\u0631') || q.includes('\u0623\u0633')) return '\u0642\u0648\u0649 \u0648\u062C\u0630\u0648\u0631';
-        if (q.includes('ratio') || q.includes('\u0646\u0633\u0628\u0629')) return '\u0646\u0633\u0628';
-        if (q.includes('bodmas') || q.includes('\u0623\u0648\u0644\u0648\u064A\u0629') || (q.includes('(') && q.includes(')'))) return '\u0623\u0648\u0644\u0648\u064A\u0629 \u0627\u0644\u0639\u0645\u0644\u064A\u0627\u062A';
-        if (q.includes('if x') || q.includes('\u0625\u0630\u0627 \u0643\u0627\u0646')) return '\u062A\u0639\u0628\u064A\u0631\u0627\u062A';
-        return '\u062D\u0633\u0627\u0628';
+    addXP(amount) {
+        this.state.xp += amount;
+        while (this.state.playerLevel < this.xpTable.length - 1 && this.state.xp >= this.xpTable[this.state.playerLevel]) {
+            this.state.playerLevel++;
+            this.showLevelUp();
+        }
     },
 
-    // ---- Progression ----
-    checkLevelUp() {
-        let lv = this.state.playerLevel;
-        while (lv < this.xpTable.length - 1 && this.state.xp >= this.xpTable[lv]) lv++;
-        this.state.playerLevel = lv;
-    },
-
-    showLevelUp(lv) {
+    showLevelUp() {
         const el = document.getElementById('level-up');
-        document.getElementById('level-up-text').textContent = '\u0645\u0633\u062A\u0648\u0649 ' + lv;
         el.classList.remove('hidden');
-        Sound.levelUp();
-        setTimeout(() => el.classList.add('hidden'), 2500);
+        document.getElementById('level-up-text').textContent = 'المستوى ' + this.state.playerLevel;
+        this.state.maxHp += 10;
+        this.state.currentHp = this.state.maxHp;
+        document.getElementById('level-up-unlock').textContent = '+10 صحة قصوى';
+        Sound.play('levelUp');
+        setTimeout(() => el.classList.add('hidden'), 3000);
     },
 
-    // ---- Achievements ----
-    checkAllAchievements() {
-        const s = this.state;
-        const unlock = id => {
-            if (s.achievements.includes(id)) return;
-            s.achievements.push(id);
-            const a = this.achievements.find(a => a.id === id);
-            if (a) this.notify('\u0625\u0646\u062C\u0627\u0632: ' + a.name + '!', 'secret', 4000);
+    showRegionUnlock(name) {
+        const el = document.getElementById('region-unlock');
+        el.classList.remove('hidden');
+        document.getElementById('region-unlock-name').textContent = name;
+        setTimeout(() => el.classList.add('hidden'), 4000);
+    },
+
+    showWorldMap() {
+        this.mode = 'menu';
+        if (document.pointerLockElement) document.exitPointerLock();
+        this.showScreen('screen-worldmap');
+        this.renderWorldMap();
+    },
+
+    renderWorldMap() {
+        const canvas = document.getElementById('worldmap-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width, h = canvas.height;
+        ctx.fillStyle = '#1a1a2e';
+        ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+        for (let x = 0; x < w; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+        for (let y = 0; y < h; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        for (let i = 0; i < World.regions.length - 1; i++) {
+            const r1 = World.regions[i], r2 = World.regions[i + 1];
+            ctx.beginPath(); ctx.moveTo(r1.mapPos.x, r1.mapPos.y); ctx.lineTo(r2.mapPos.x, r2.mapPos.y); ctx.stroke();
+        }
+        ctx.setLineDash([]);
+        const icons = { village: '🏘️', forest: '🌲', city: '🏙️', cave: '🕳️', castle: '🏰' };
+        World.regions.forEach(region => {
+            const unlocked = this.state && this.state.unlockedRegions.includes(region.id);
+            const isCurrent = this.state && this.state.currentRegion === region.id;
+            const x = region.mapPos.x, y = region.mapPos.y;
+            if (isCurrent) { ctx.fillStyle = region.color + '44'; ctx.beginPath(); ctx.arc(x, y, 40, 0, Math.PI * 2); ctx.fill(); }
+            ctx.fillStyle = unlocked ? region.color : '#333333';
+            ctx.beginPath(); ctx.arc(x, y, 25, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = isCurrent ? '#ffffff' : unlocked ? region.color : '#555555';
+            ctx.lineWidth = isCurrent ? 3 : 2;
+            ctx.stroke();
+            ctx.fillStyle = unlocked ? '#ffffff' : '#666666';
+            ctx.font = '20px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(icons[region.type] || '📍', x, y);
+            ctx.font = 'bold 12px Arial';
+            ctx.fillText(region.name, x, y + 38);
+            if (!unlocked) { ctx.fillStyle = '#ff6666'; ctx.font = '14px Arial'; ctx.fillText('🔒', x, y - 30); }
+        });
+        canvas.onclick = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
+            const mx = (e.clientX - rect.left) * scaleX, my = (e.clientY - rect.top) * scaleY;
+            World.regions.forEach(region => {
+                const dx = mx - region.mapPos.x, dy = my - region.mapPos.y;
+                if (Math.sqrt(dx * dx + dy * dy) < 30) {
+                    this._selectedMapRegion = region.id;
+                    document.getElementById('map-region-name').textContent = region.name;
+                    document.getElementById('map-region-desc').textContent = region.desc;
+                    const unlocked = this.state && this.state.unlockedRegions.includes(region.id);
+                    document.getElementById('map-region-stats').innerHTML = '<p>الصعوبة: ' + (region.difficulty === 'easy' ? 'سهل' : region.difficulty === 'medium' ? 'متوسط' : 'صعب') + '</p><p>المواد: ' + region.subjects.map(s => s === 'math' ? '📐 رياضيات' : s === 'physics' ? '⚛️ فيزياء' : '🧪 كيمياء').join(' | ') + '</p><p>' + (unlocked ? '✅ مفتوحة' : '🔒 مقفلة') + '</p>';
+                    const travelBtn = document.getElementById('btn-travel');
+                    travelBtn.disabled = !unlocked;
+                    travelBtn.textContent = unlocked ? 'سافر إلى المنطقة' : 'مقفلة';
+                }
+            });
         };
-        if (s.completedEnemies.length >= 1) unlock('first_blood');
-        if (this.battle && this.battle.bestCombo >= 5) unlock('combo5');
-        if (s.speedAnswers >= 5) unlock('speed5');
-        if (s.bossesDefeated.length >= 1) unlock('boss_slayer');
-        if (s.secretsFound.length >= 1) unlock('chest_finder');
-        if (s.totalCorrect >= 100) unlock('math_genius');
-        const forestEnemies = Maps.forest.enemies.map(e => e.id);
-        if (forestEnemies.every(id => s.completedEnemies.includes(id))) unlock('all_forest');
-        const caveEnemies = Maps.cave.enemies.map(e => e.id);
-        if (caveEnemies.every(id => s.completedEnemies.includes(id))) unlock('all_cave');
-        const castleEnemies = Maps.castle.enemies.map(e => e.id);
-        if (castleEnemies.every(id => s.completedEnemies.includes(id))) unlock('all_castle');
-        if (s.completedEnemies.includes('e_final')) unlock('game_complete');
     },
 
-    checkAchievement(id) {
-        if (this.state.achievements.includes(id)) return;
-        this.state.achievements.push(id);
-        const a = this.achievements.find(a => a.id === id);
-        if (a) this.notify('\u0625\u0646\u062C\u0627\u0632: ' + a.name + '!', 'secret', 4000);
-    },
-
-    // ---- Shop ----
-    openShop() {
-        this.mode = 'menu';
-        document.getElementById('shop-gold-display').textContent = this.state.gold + ' \u0630\u0647\u0628';
-        const grid = document.getElementById('shop-grid');
-        grid.innerHTML = '';
-        this.shopItems.forEach(item => {
-            const owned = this.state.inventory[item.id] || 0;
-            const canBuy = this.state.gold >= item.price && owned < item.max;
-            const card = document.createElement('div');
-            card.className = `shop-card ${canBuy ? '' : 'sold-out'}`;
-            card.innerHTML = `<div class="shop-icon">${item.icon}</div><h4>${item.name}</h4>
-                <p>${item.desc}</p><p style="font-size:.65rem;color:var(--muted)">\u0645\u0645\u0644\u0648\u0643: ${owned}/${item.max}</p>
-                <div class="shop-price">${item.price} \u0630\u0647\u0628</div>`;
-            if (canBuy) card.onclick = () => {
-                this.state.gold -= item.price;
-                this.state.inventory[item.id] = owned + 1;
-                this.state.totalPurchases++;
-                this.saveState();
-                Sound.confirm();
-                this.notify('\u0627\u0634\u062A\u0631\u064A\u062A ' + item.name + '!', 'success');
-                this.openShop();
-            };
-            grid.appendChild(card);
-        });
-        this.showOverlay('screen-shop');
-    },
-
-    closeShop() {
-        this.hideOverlay('screen-shop');
-        this.mode = 'explore';
-        this.updateHUD();
-    },
-
-    // ---- Inventory ----
-    openInventory() {
-        this.mode = 'menu';
-        const grid = document.getElementById('inv-grid');
-        grid.innerHTML = '';
-        let has = false;
-        Object.entries(this.state.inventory).forEach(([id, count]) => {
-            if (count <= 0) return;
-            has = true;
-            const item = this.shopItems.find(i => i.id === id);
-            if (!item) return;
-            const card = document.createElement('div');
-            card.className = 'inv-card';
-            card.innerHTML = `<div class="inv-icon">${item.icon}</div><h4>${item.name}</h4><div class="inv-count">x${count}</div>`;
-            grid.appendChild(card);
-        });
-        if (!has) grid.innerHTML = '<div class="inv-empty">\u0644\u0627 \u0639\u0646\u0627\u0635\u0631 \u0628\u0639\u062F. \u0632\u0631 \u0627\u0644\u0645\u062A\u062C\u0631 \u0641\u064A \u0627\u0644\u0642\u0631\u064A\u0629!</div>';
-        this.showOverlay('screen-inventory');
-    },
-
-    closeInventory() {
-        this.hideOverlay('screen-inventory');
-        this.mode = 'explore';
-    },
-
-    // ---- Title background ----
-    renderTitleBg() {
-        const c = document.getElementById('title-canvas');
-        c.width = window.innerWidth;
-        c.height = window.innerHeight;
-        const ctx = c.getContext('2d');
-
-        // Dark gradient background
-        const bg = ctx.createLinearGradient(0, 0, 0, c.height);
-        bg.addColorStop(0, '#0a0e1a');
-        bg.addColorStop(0.5, '#0d1225');
-        bg.addColorStop(1, '#080b14');
-        ctx.fillStyle = bg;
-        ctx.fillRect(0, 0, c.width, c.height);
-
-        // Purple/blue radial glow
-        const g1 = ctx.createRadialGradient(c.width*0.3, c.height*0.2, 0, c.width*0.3, c.height*0.2, c.width*0.5);
-        g1.addColorStop(0, 'rgba(139,92,246,0.06)');
-        g1.addColorStop(1, 'transparent');
-        ctx.fillStyle = g1;
-        ctx.fillRect(0, 0, c.width, c.height);
-
-        const g2 = ctx.createRadialGradient(c.width*0.7, c.height*0.6, 0, c.width*0.7, c.height*0.6, c.width*0.4);
-        g2.addColorStop(0, 'rgba(59,130,246,0.04)');
-        g2.addColorStop(1, 'transparent');
-        ctx.fillStyle = g2;
-        ctx.fillRect(0, 0, c.width, c.height);
-
-        // Floating math symbols with varied sizes and opacity
-        const syms = ['+','-','\u00D7','\u00F7','=','\u03C0','\u221A','\u03A3','\u221E','\u0394','x','y','\u00B2','%','{','}','f(x)'];
-        for (let i = 0; i < 40; i++) {
-            const sz = 12 + Math.random() * 24;
-            const alpha = 0.03 + Math.random() * 0.08;
-            ctx.font = `${sz}px monospace`;
-            ctx.fillStyle = i % 3 === 0 ? `rgba(139,92,246,${alpha})` :
-                            i % 3 === 1 ? `rgba(59,130,246,${alpha})` :
-                            `rgba(6,182,212,${alpha})`;
-            ctx.fillText(syms[i % syms.length],
-                Math.random() * c.width, Math.random() * c.height);
-        }
-
-        // Grid lines (subtle)
-        ctx.strokeStyle = 'rgba(59,130,246,0.03)';
-        ctx.lineWidth = 1;
-        for (let x = 0; x < c.width; x += 60) {
-            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, c.height); ctx.stroke();
-        }
-        for (let y = 0; y < c.height; y += 60) {
-            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(c.width, y); ctx.stroke();
-        }
-
-        // Characters with glow
-        const cx = c.width / 2;
-        const cy = c.height * 0.65;
-        // Character platform glow
-        const pg = ctx.createRadialGradient(cx, cy+20, 10, cx, cy+20, 120);
-        pg.addColorStop(0, 'rgba(139,92,246,0.08)');
-        pg.addColorStop(1, 'transparent');
-        ctx.fillStyle = pg;
-        ctx.fillRect(cx-150, cy-30, 300, 80);
-
-        Sprites.drawCharacter(ctx, cx - 80, cy, 'knight', 'down', 0, 2);
-        Sprites.drawCharacter(ctx, cx - 20, cy - 3, 'mage', 'down', 0, 2);
-        Sprites.drawCharacter(ctx, cx + 40, cy, 'ranger', 'down', 1, 2);
-        Sprites.drawEnemy(ctx, cx + 120, cy - 2, 'dragon', 0);
-        Sprites.drawEnemy(ctx, cx - 140, cy + 2, 'skeleton', 0);
-
-        // Bottom vignette
-        const vg = ctx.createLinearGradient(0, c.height*0.7, 0, c.height);
-        vg.addColorStop(0, 'transparent');
-        vg.addColorStop(1, 'rgba(8,11,20,0.8)');
-        ctx.fillStyle = vg;
-        ctx.fillRect(0, c.height*0.7, c.width, c.height*0.3);
-    },
-
-    // ---- Character Select ----
-    renderCharSelect() {
+    renderCharacterSelect() {
         const grid = document.getElementById('char-grid');
         grid.innerHTML = '';
-        this.selectedCharId = null;
-        this.characters.forEach(ch => {
+        World.characters.forEach(char => {
             const card = document.createElement('div');
-            card.className = `char-card ${ch.unlocked ? '' : 'locked'}`;
-
-            // Mini canvas for character preview
-            const miniC = document.createElement('canvas');
-            miniC.width = 48; miniC.height = 48;
-            const mctx = miniC.getContext('2d');
-            mctx.imageSmoothingEnabled = false;
-            Sprites.drawCharacter(mctx, 8, 8, ch.id, 'down', 0);
-
-            const av = document.createElement('div');
-            av.className = 'char-avatar';
-            av.appendChild(miniC);
-            card.appendChild(av);
-
-            // Use DOM methods instead of innerHTML+= to preserve canvas
-            const nameEl = document.createElement('h4');
-            nameEl.textContent = ch.name;
-            card.appendChild(nameEl);
-
-            const descEl = document.createElement('p');
-            descEl.textContent = ch.desc;
-            card.appendChild(descEl);
-
-            if (ch.unlocked) {
-                card.onclick = () => {
-                    grid.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
-                    card.classList.add('selected');
-                    this.selectedCharId = ch.id;
-                    document.getElementById('btn-start').disabled = false;
-                    Sound.select();
-                };
-            }
+            card.className = 'char-card';
+            card.dataset.charId = char.id;
+            card.innerHTML = '<div class="char-avatar">' + char.emoji + '</div><div class="char-name">' + char.name + '</div><div class="char-desc">' + char.desc + '</div><div class="char-stats"><div class="char-stat"><span class="char-stat-value">' + char.hp + '</span><span class="char-stat-label">صحة</span></div><div class="char-stat"><span class="char-stat-value">' + char.dmg + '</span><span class="char-stat-label">ضرر</span></div><div class="char-stat"><span class="char-stat-value">' + char.def + '</span><span class="char-stat-label">دفاع</span></div></div>';
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                document.getElementById('btn-start').disabled = false;
+                Sound.play('select');
+            });
             grid.appendChild(card);
         });
+    },
+
+    updateHUD() {
+        if (!this.state) return;
+        document.getElementById('hud-name').textContent = this.state.playerName;
+        document.getElementById('hud-level').textContent = this.state.playerLevel;
+        document.getElementById('hud-gold').textContent = this.state.gold;
+        document.getElementById('hud-keys').textContent = this.state.keys;
+        document.getElementById('hud-stars').textContent = this.state.stars;
+        const hpPct = (this.state.currentHp / this.state.maxHp) * 100;
+        document.getElementById('hud-hp').style.width = hpPct + '%';
+        document.getElementById('hud-hp-text').textContent = this.state.currentHp + '/' + this.state.maxHp;
+        const currentLevelXP = this.xpTable[this.state.playerLevel - 1] || 0;
+        const nextLevelXP = this.xpTable[this.state.playerLevel] || this.xpTable[this.xpTable.length - 1];
+        const xpPct = ((this.state.xp - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100;
+        document.getElementById('hud-xp').style.width = Math.min(100, Math.max(0, xpPct)) + '%';
+        document.getElementById('hud-xp-text').textContent = this.state.xp + '/' + nextLevelXP + ' XP';
+        const char = World.characters.find(c => c.id === this.state.characterId);
+        if (char) document.getElementById('hud-avatar').textContent = char.emoji;
+        this.updateWeaponSlots();
+    },
+
+    updateWeaponSlots() {
+        if (!this.state) return;
+        document.querySelectorAll('.weapon-slot').forEach(slot => {
+            const slotNum = parseInt(slot.dataset.slot);
+            const unlocked = this.state.unlockedWeapons.includes(slotNum);
+            const active = this.state.currentWeapon === slotNum;
+            slot.classList.toggle('active', active);
+            slot.classList.toggle('locked', !unlocked);
+            const ammoEl = slot.querySelector('.weapon-ammo');
+            if (ammoEl) ammoEl.textContent = unlocked ? '∞' : '🔒';
+        });
+    },
+
+    updateBattleHP() {
+        if (!this.battle) return;
+        const playerPct = (this.battle.playerHp / this.battle.playerMaxHp) * 100;
+        const enemyPct = (this.battle.enemyHp / this.battle.enemyMaxHp) * 100;
+        document.getElementById('bf-player-hp').style.width = playerPct + '%';
+        document.getElementById('bf-player-hp-text').textContent = this.battle.playerHp + '/' + this.battle.playerMaxHp;
+        document.getElementById('bf-enemy-hp').style.width = enemyPct + '%';
+        document.getElementById('bf-enemy-hp-text').textContent = this.battle.enemyHp + '/' + this.battle.enemyMaxHp;
+    },
+
+    showBattleMsg(text, color) {
+        const el = document.getElementById('battle-msg');
+        el.textContent = text;
+        el.style.color = color || '#ffffff';
+        el.style.display = 'block';
+        setTimeout(() => { el.style.display = 'none'; }, 1500);
+    },
+
+    showScreen(id) {
+        document.querySelectorAll('.overlay').forEach(o => o.classList.remove('active'));
+        const el = document.getElementById(id);
+        if (el) el.classList.add('active');
+    },
+
+    hideAllScreens() {
+        document.querySelectorAll('.overlay').forEach(o => o.classList.remove('active'));
+    },
+
+    notify(text, type) {
+        const container = document.getElementById('notif-container');
+        const notif = document.createElement('div');
+        notif.className = 'notif ' + (type || 'info');
+        notif.textContent = text;
+        container.appendChild(notif);
+        setTimeout(() => notif.remove(), 3500);
+    },
+
+    loop(time) {
+        requestAnimationFrame(t => this.loop(t));
+        if (this.mode === 'explore') {
+            Engine3D.update();
+            Engine3D.renderMinimap();
+            const nearby = Engine3D.checkProximity();
+            const hint = document.querySelector('.hud-location');
+            if (nearby && nearby.type === 'enemy' && hint) hint.textContent = '⚔️ ' + nearby.data.name + ' - اضغط E للقتال';
+            else if (nearby && nearby.type === 'npc' && hint) hint.textContent = '💬 ' + nearby.data.name + ' - اضغط E للحديث';
+            else if (nearby && nearby.type === 'chest' && hint) hint.textContent = '📦 صندوق كنز - اضغط E لفتحه';
+            else if (nearby && nearby.type === 'shop' && hint) hint.textContent = '🏪 المتجر - اضغط E للدخول';
+            else {
+                const region = World.getRegion(this.state ? this.state.currentRegion : 'village');
+                if (hint && region) hint.textContent = region.name;
+            }
+        }
+        if (this.mode === 'title') Engine3D.renderTitleBackground();
     }
 };
